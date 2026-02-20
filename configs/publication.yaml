@@ -1,0 +1,35 @@
+# Full publication study — 6 benchmarks, 4 dimensions, 30 runs
+# Usage: python experiments/run_full_study.py --config configs/publication.yaml
+
+benchmarks:
+  - sphere
+  - rastrigin
+  - rosenbrock
+  - ackley
+  - griewank
+  - schwefel
+
+dimensions: [2, 5, 10, 20]
+num_runs: 30
+num_particles: 40
+max_iterations: 500
+success_threshold: 1.0e-6
+stagnation_limit: 20
+seed: 42
+qpso_modes: ["math", "hybrid"]
+verbose: false
+results_dir: results
+
+pso:
+  inertia_start: 0.9
+  inertia_end: 0.4
+  cognitive_coef: 1.494
+  social_coef: 1.494
+  velocity_clamp: 0.2
+
+qpso:
+  beta_start: 1.0
+  beta_end: 0.5
+  cognitive_coef: 1.494
+  social_coef: 1.494
+  shots: 256
