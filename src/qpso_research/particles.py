@@ -41,15 +41,24 @@ class PSOParticle:
 
 class QPSOParticle:
     """
-    Quantum PSO particle — no velocity vector.
+    Quantum PSO particle with optional wave-packet momentum.
 
     Position is determined by the quantum wave function mechanism:
-    attractor point + quantum tunnelling displacement.
+    attractor point + quantum tunnelling displacement + momentum nudge.
+
+    The momentum vector tracks the exponential moving average of recent
+    position changes, modelling the de Broglie momentum component of the
+    quantum wave packet ψ(x,t) = A·exp(i(kx − ωt)).  Standard QPSO only
+    models |ψ|² (position distribution) but discards the momentum p = ℏk.
+    Restoring it enables directional persistence for ridge-following on
+    functions like Rosenbrock.
     """
 
     def __init__(self, dimensions: int, bounds: tuple[float, float]):
         lo, hi = bounds
         self.position = np.random.uniform(lo, hi, dimensions)
+        self.prev_position = self.position.copy()
+        self.momentum = np.zeros(dimensions)
         self.best_pos = self.position.copy()
         self.best_score = float("inf")
         self.score = float("inf")

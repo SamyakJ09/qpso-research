@@ -1,0 +1,98 @@
+% ─────────────────────────────────────────────────────────────
+% Preamble — packages and configuration
+% ─────────────────────────────────────────────────────────────
+
+% ── Font: Latin Modern (Computer Modern successor) ──────────
+\usepackage{lmodern}           % Latin Modern — refined Computer Modern
+\usepackage[T1]{fontenc}       % proper glyph encoding
+\usepackage[utf8]{inputenc}    % UTF-8 source files
+
+% ── Mathematics ─────────────────────────────────────────────
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{mathtools}         % extends amsmath
+\usepackage{bm}                % bold math symbols
+
+% ── Tables and figures ──────────────────────────────────────
+\usepackage{booktabs}          % professional tables (\toprule, \midrule, \bottomrule)
+\usepackage{tabularx}          % auto-width columns
+\usepackage{multirow}          % span rows in tables
+\usepackage{graphicx}          % \includegraphics
+\usepackage{float}             % [H] placement
+\usepackage{subcaption}        % subfigures
+
+% ── Colours (load before minted) ────────────────────────────
+\usepackage[dvipsnames,svgnames,x11names]{xcolor}
+\definecolor{codebg}{RGB}{248, 248, 248}
+\definecolor{psocolor}{named}{Tomato}
+\definecolor{qpsocolor}{named}{RoyalBlue}
+\definecolor{linkcolor}{RGB}{0, 80, 160}
+
+% ── Code listings with minted ───────────────────────────────
+\usepackage{minted}
+\setminted{
+    fontsize=\footnotesize,
+    frame=lines,
+    framesep=2mm,
+    linenos,
+    breaklines,
+    numbersep=5pt,
+    tabsize=4,
+}
+\usemintedstyle{friendly}
+
+% ── Algorithms ──────────────────────────────────────────────
+\usepackage{algorithm}
+\usepackage{algpseudocode}     % algorithmicx with algorithmic environment
+\algnewcommand\algorithmicinput{\textbf{Input:}}
+\algnewcommand\Input{\item[\algorithmicinput]}
+\algnewcommand\algorithmicoutput{\textbf{Output:}}
+\algnewcommand\Output{\item[\algorithmicoutput]}
+
+% ── Hyperlinks and cross-references ─────────────────────────
+\usepackage[
+    colorlinks=true,
+    linkcolor=linkcolor,
+    citecolor=linkcolor,
+    urlcolor=linkcolor,
+    bookmarks=true,
+    bookmarksnumbered=true,
+]{hyperref}
+\usepackage[noabbrev,capitalise]{cleveref}  % \cref{} — load AFTER hyperref
+
+% ── Bibliography ────────────────────────────────────────────
+\usepackage[
+    backend=biber,
+    style=numeric-comp,
+    sorting=none,
+    maxbibnames=6,
+    minbibnames=3,
+    doi=true,
+    url=false,
+    isbn=false,
+]{biblatex}
+\addbibresource{references.bib}
+
+% ── Layout ──────────────────────────────────────────────────
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% ── Appendix support ────────────────────────────────────────
+\usepackage[toc,page]{appendix}
+
+% ── Miscellaneous ───────────────────────────────────────────
+\usepackage{microtype}         % optical margin alignment
+\usepackage{siunitx}           % SI units, number formatting
+\usepackage{enumitem}          % list customisation
+\usepackage{csquotes}          % context-sensitive quotation (needed by biblatex)
+
+% ── Custom commands ─────────────────────────────────────────
+\newcommand{\PSO}{\textsc{pso}}
+\newcommand{\QPSO}{\textsc{qpso}}
+\newcommand{\WQPSO}{\textsc{wqpso}}
+\newcommand{\mbest}{\mathbf{m}_{\text{best}}}
+\newcommand{\pbest}{\mathbf{p}_{\text{best}}}
+\newcommand{\gbest}{\mathbf{g}_{\text{best}}}
+\newcommand{\vect}[1]{\mathbf{#1}}

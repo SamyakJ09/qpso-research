@@ -6,17 +6,37 @@ Three modes via the `mode` parameter:
   - "full"   : ALL randomness from Qiskit quantum circuits
   - "hybrid" : only tunnelling sign from Qiskit, rest classical
 
-All modes share the same QPSO update equations:
-  1. Compute attractor phi (weighted midpoint of personal + global best)
-  2. Compute quantum well length L from mbest distance + Beta
-  3. Sample displacement from quantum exponential distribution
-  4. Apply tunnelling sign to land on either side of phi
+Implements the canonical QPSO position update (Sun et al. 2004, 2012)
+enhanced with two literature-backed improvements:
+
+  1. Compute attractor p_i = phi * pbest + (1-phi) * gbest
+  2. Compute displacement = beta * |mbest - x_i| * ln(1/u)
+  3. Apply tunnelling sign: x_quantum = p_i ± displacement
+  4. Apply wave-packet momentum: x_i = x_quantum + gamma * momentum_i
   5. Clamp to search bounds
 
+Enhancements:
+  - Weighted Mean Best (WQPSO, Xi et al. 2008): fitness-weighted mbest
+    biases the swarm reference toward better solutions.
+  - Wave-packet momentum (de Broglie): each particle tracks an EMA of
+    its recent position changes.  Standard QPSO models only the position
+    distribution |ψ|² but discards the momentum p = ℏk of the wave
+    function ψ = A·exp(i(kx − ωt)).  Restoring it enables directional
+    persistence for following narrow curved valleys (Rosenbrock).
+  - Elitist refinement (EB-QPSO): differential direction step +
+    coordinate-wise Gaussian perturbation of the global best.
+
 Sources:
-  math   — pso_vs_qpsoTEST1.py
-  full   — pso_vs_qpsoTEST2.py
-  hybrid — pso_vs_qpsoTEST3.py
+  Sun J, Xu W, Feng B. "A global search strategy of quantum-behaved
+    particle swarm optimization." IEEE CCC, 2004.
+  Sun J, Fang W, Wu X, Palade V, Xu W. "Quantum-behaved particle swarm
+    optimization: analysis of individual particle behavior and parameter
+    selection." Evolutionary Computation 20(3):349-393, 2012.
+  Xi M, Sun J, Xu W. "An improved quantum-behaved particle swarm
+    optimization algorithm with weighted mean best position."
+    Applied Mathematics and Computation, 2008.
+  Fallahi S, Taghadosi M. "Quantum-behaved particle swarm optimization
+    based on solitons." Scientific Reports 12:13977, 2022.
 """
 
 import time
@@ -24,7 +44,12 @@ import time
 import numpy as np
 
 from .particles import QPSOParticle
-from .convergence import compute_mean_best, scatter_worst_particles, StagnationDetector
+from .convergence import (
+    compute_mean_best,
+    compute_weighted_mean_best,
+    scatter_worst_particles,
+    StagnationDetector,
+)
 
 
 class QPSO:
@@ -46,6 +71,8 @@ class QPSO:
     success_threshold : float — score below this counts as "reached goal"
     mode              : str — "math", "full", or "hybrid"
     shots             : int — Qiskit shots per circuit (only for full/hybrid modes)
+    momentum_decay    : float — EMA decay for wave-packet momentum (0 = off, 0.8 = strong)
+    momentum_weight   : float — strength of momentum nudge on position update
     """
 
     VALID_MODES = ("math", "full", "hybrid")
@@ -65,6 +92,8 @@ class QPSO:
         success_threshold: float = 1e-6,
         mode: str = "math",
         shots: int = 256,
+        momentum_decay: float = 0.7,
+        momentum_weight: float = 0.1,
     ):
         if mode not in self.VALID_MODES:
             raise ValueError(f"mode must be one of {self.VALID_MODES}, got '{mode}'")
@@ -80,6 +109,8 @@ class QPSO:
         self.c2 = social_coef
         self.threshold = success_threshold
         self.mode = mode
+        self.mom_decay = momentum_decay
+        self.mom_weight = momentum_weight
 
         self.stagnation = StagnationDetector(limit=stagnation_limit)
 
@@ -101,6 +132,53 @@ class QPSO:
         self.beta_history: list[float] = []
         self.iter_to_success: int | None = None
         self.elapsed: float = 0.0
+
+    def _refine_global_best(self, beta: float) -> None:
+        """
+        Elitist refinement of the global best using two strategies:
+
+        1. Differential mutation — perturb gbest along a direction derived
+           from two random particles' personal bests.  On valley functions
+           like Rosenbrock, particles spread along the ridge, so the
+           differential vector naturally aligns with the valley curve.
+        2. Coordinate-wise Gaussian — try a small random step in each
+           dimension independently (EB-QPSO style).
+
+        Both strategies are greedy: improvements are kept immediately.
+        """
+        lo, hi = self.bounds
+
+        # Strategy 1: differential direction step (DE-inspired)
+        # Uses direction from two random particles' bests, scaled to
+        # a controlled step size.  On valley functions, particles spread
+        # along the ridge, so the direction naturally follows the curve.
+        if len(self.swarm) >= 3:
+            idxs = np.random.choice(len(self.swarm), 2, replace=False)
+            diff = self.swarm[idxs[0]].best_pos - self.swarm[idxs[1]].best_pos
+            norm = np.linalg.norm(diff)
+            if norm > 1e-10:
+                sigma_dir = beta * (hi - lo) * 0.02
+                direction = diff / norm
+                candidate = np.clip(
+                    self.global_best_pos + sigma_dir * direction, lo, hi
+                )
+                score = self.fn(candidate)
+                if score < self.global_best_score:
+                    self.global_best_score = score
+                    self.global_best_pos = candidate.copy()
+
+        # Strategy 2: coordinate-wise Gaussian perturbation
+        candidate = self.global_best_pos.copy()
+        sigma = beta * (hi - lo) * 0.02
+        for d in range(self.dims):
+            trial = candidate.copy()
+            trial[d] += np.random.normal(0, sigma)
+            trial[d] = np.clip(trial[d], lo, hi)
+            score = self.fn(trial)
+            if score < self.global_best_score:
+                candidate[d] = trial[d]
+                self.global_best_score = score
+                self.global_best_pos = candidate.copy()
 
     def _beta(self, iteration: int, stagnating: bool = False) -> float:
         """Compute Beta with linear decay and stagnation widening."""
@@ -161,7 +239,6 @@ class QPSO:
         for it in range(1, self.max_iter + 1):
             stagnating = self.stagnation.is_stagnating
             beta = self._beta(it, stagnating)
-            fine_tuning = it > self.max_iter * 0.9
             self.beta_history.append(beta)
 
             # ── Evaluate ──────────────────────────────────────────
@@ -173,8 +250,14 @@ class QPSO:
                     self.global_best_score = score
                     self.global_best_pos = p.position.copy()
 
-            # ── Mean best ─────────────────────────────────────────
-            mbest = compute_mean_best([p.best_pos for p in self.swarm])
+            # ── Weighted mean best (WQPSO) ────────────────────────
+            # Fitness-weighted mbest biases toward better particles,
+            # pulling the swarm reference toward the valley floor on
+            # narrow-valley functions like Rosenbrock.
+            mbest = compute_weighted_mean_best(
+                [p.best_pos for p in self.swarm],
+                [p.best_score for p in self.swarm],
+            )
             if goal_coords is not None:
                 mbest_dist = float(np.linalg.norm(mbest - np.array(goal_coords)))
             else:
@@ -192,28 +275,43 @@ class QPSO:
             if self.stagnation.update(self.global_best_score):
                 scatter_worst_particles(self.swarm, self.global_best_pos, self.bounds)
 
-            # ── Get random values (mode-dependent) ────────────────
-            r1_all, r2_all, u_all, sign_all = self._get_random_values(beta)
+            # ── Elitist local refinement (every 5 iterations) ─────
+            if it % 5 == 0:
+                self._refine_global_best(beta)
 
-            # ── Quantum position update ───────────────────────────
+            # ── Get random values (mode-dependent) ────────────────
+            _, _, u_all, sign_all = self._get_random_values(beta)
+
+            # ── Quantum position update (canonical Sun et al.) ────
+            # Enhanced with de Broglie wave-packet momentum: the
+            # particle's wave function ψ = A·exp(i(kx-ωt)) carries
+            # both a position distribution (|ψ|², modelled by the
+            # standard quantum step) and a momentum p = ℏk (modelled
+            # by the EMA of recent position changes).
             for i, p in enumerate(self.swarm):
-                r1 = r1_all[i]
-                r2 = r2_all[i]
                 u = u_all[i]
                 sign = sign_all[i]
+                prev_pos = p.position.copy()
 
-                # Attractor — weighted midpoint of personal + global best
-                phi = (self.c1 * r1 * p.best_pos + self.c2 * r2 * self.global_best_pos) / \
-                      (self.c1 * r1 + self.c2 * r2 + 1e-10)
+                # Attractor — random interpolation between personal + global best
+                theta = np.random.random(self.dims)
+                attractor = theta * p.best_pos + (1.0 - theta) * self.global_best_pos
 
-                if fine_tuning:
-                    tight_beta = max(beta * 0.3, 0.1)
-                    L = (2.0 / tight_beta) * np.abs(phi - self.global_best_pos) + 1e-8
-                else:
-                    L = (2.0 / beta) * np.abs(phi - mbest) + 1e-8
+                # Quantum displacement: beta * |mbest - x_i| * ln(1/u)
+                displacement = beta * np.abs(mbest - p.position) * np.log(1.0 / u)
 
-                delta = (L / 2.0) * np.log(1.0 / u)
-                p.position = np.clip(phi + sign * delta, lo, hi)
+                # Quantum step (position from |ψ|² distribution)
+                x_quantum = attractor + sign * displacement
+
+                # Wave-packet momentum (de Broglie component p = ℏk)
+                # A light directional nudge that helps particles follow
+                # curved valleys without overwhelming quantum tunnelling
+                # on multimodal landscapes.
+                delta = x_quantum - prev_pos
+                p.momentum = self.mom_decay * p.momentum + (1.0 - self.mom_decay) * delta
+
+                # Final position: quantum step + momentum nudge
+                p.position = np.clip(x_quantum + self.mom_weight * p.momentum, lo, hi)
 
             if verbose and (it % 25 == 0 or it == 1):
                 print(f"  [QPSO] Iter {it:>4d}/{self.max_iter} | "

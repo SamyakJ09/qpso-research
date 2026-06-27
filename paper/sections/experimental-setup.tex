@@ -1,0 +1,111 @@
+\section{Experimental Setup}
+\label{sec:experimental-setup}
+
+This section describes the benchmark test suite, algorithmic parameters, statistical methodology, and experimental protocol employed in our comparative study. All design choices aim to ensure a fair, reproducible, and statistically rigorous evaluation of Classical PSO and Quantum-behaved PSO across a representative set of optimization landscapes.
+
+\subsection{Benchmark Test Suite}
+\label{subsec:benchmarks}
+
+We evaluate both algorithms on six well-established benchmark functions that span a range of landscape characteristics, including unimodal, multimodal, and valley-shaped topologies. These functions are widely used in the evolutionary computation literature and provide a balanced assessment of an optimizer's ability to exploit gradients, escape local optima, and navigate narrow valleys. Table~\ref{tab:benchmarks} summarizes the mathematical definitions, search domains, global optima, and landscape characteristics of each function.
+
+\begin{table}[htbp]
+\centering
+\caption{Benchmark test functions used in the experimental evaluation. All functions are minimized, with the global optimum value $f^* = 0$ except where noted.}
+\label{tab:benchmark-setup}
+\small
+\begin{tabular}{@{}llccc@{}}
+\toprule
+\textbf{Function} & \textbf{Definition} & \textbf{Domain} & \textbf{Optimum} & \textbf{Characteristic} \\
+\midrule
+Sphere &
+$f(\mathbf{x}) = \sum_{i=1}^{n} x_i^2$ &
+$[-5.12, 5.12]^n$ &
+$\mathbf{0}$, $f^*=0$ &
+Unimodal \\[6pt]
+Rastrigin &
+$f(\mathbf{x}) = 10n + \sum_{i=1}^{n} \left[ x_i^2 - 10\cos(2\pi x_i) \right]$ &
+$[-5.12, 5.12]^n$ &
+$\mathbf{0}$, $f^*=0$ &
+Multimodal \\[6pt]
+Rosenbrock &
+$f(\mathbf{x}) = \sum_{i=1}^{n-1} \left[ 100(x_{i+1} - x_i^2)^2 + (1 - x_i)^2 \right]$ &
+$[-5, 10]^n$ &
+$\mathbf{1}$, $f^*=0$ &
+Valley \\[6pt]
+Ackley &
+$\begin{aligned} f(\mathbf{x}) = &{-20\exp\!\left(-0.2\sqrt{\frac{1}{n}\sum_{i=1}^{n}x_i^2}\right)} \\ &{- \exp\!\left(\frac{1}{n}\sum_{i=1}^{n}\cos(2\pi x_i)\right) + 20 + e} \end{aligned}$ &
+$[-32.768, 32.768]^n$ &
+$\mathbf{0}$, $f^*=0$ &
+Multimodal \\[6pt]
+Griewank &
+$f(\mathbf{x}) = \sum_{i=1}^{n} \frac{x_i^2}{4000} - \prod_{i=1}^{n} \cos\!\left(\frac{x_i}{\sqrt{i}}\right) + 1$ &
+$[-600, 600]^n$ &
+$\mathbf{0}$, $f^*=0$ &
+Multimodal \\[6pt]
+Schwefel &
+$f(\mathbf{x}) = 418.9829n - \sum_{i=1}^{n} x_i \sin\!\left(\sqrt{|x_i|}\right)$ &
+$[-500, 500]^n$ &
+$\mathbf{420.97}$, $f^*=0$ &
+Deceptive \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Sphere function serves as a baseline for evaluating convergence speed on a smooth, convex surface. Rastrigin introduces a highly multimodal landscape with a cosine-modulated surface containing approximately $10^n$ local minima, making it a stringent test of an algorithm's ability to avoid premature convergence. Rosenbrock presents a narrow, parabolic valley where the global optimum lies inside a long, curved ridge, challenging the optimizer's capacity for fine-grained directional search. The Ackley function combines a nearly flat outer region with a deep central well surrounded by numerous local optima, testing both exploration and exploitation. Griewank features a product term that creates widespread interdependence among variables, while the summation term provides a quadratic bowl with superimposed oscillations. Finally, the Schwefel function is considered deceptive because the second-best local minimum is geometrically distant from the global optimum, rewarding algorithms that maintain diverse search populations.
+
+\subsection{Parameter Configuration}
+\label{subsec:parameters}
+
+Both algorithms were configured using parameter values that reflect established recommendations from the literature \cite{Clerc2002,Sun2004}. Table~\ref{tab:parameters} presents the parameter settings for Classical PSO and QPSO, along with shared experimental parameters.
+
+\begin{table}[htbp]
+\centering
+\caption{Parameter configuration for Classical PSO and Quantum-behaved PSO. Linear schedules are denoted with an arrow indicating the transition from the initial to the final value over the course of the optimization.}
+\label{tab:parameters}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Parameter} & \textbf{Classical PSO} & \textbf{QPSO} \\
+\midrule
+Inertia weight / Contraction--expansion ($\beta$) & $0.9 \to 0.4$ & $1.0 \to 0.5$ \\
+Cognitive coefficient ($c_1$) & 1.494 & 1.494 \\
+Social coefficient ($c_2$) & 1.494 & 1.494 \\
+Velocity clamping & 20\% of range & --- \\
+Quantum circuit shots & --- & 256 \\
+Stagnation detection limit & 15 iterations & 15 iterations \\
+\midrule
+\multicolumn{3}{c}{\textbf{Common Parameters}} \\
+\midrule
+Swarm size & \multicolumn{2}{c}{40 particles} \\
+Maximum iterations & \multicolumn{2}{c}{500} \\
+Independent runs per configuration & \multicolumn{2}{c}{30} \\
+Success threshold & \multicolumn{2}{c}{$1 \times 10^{-6}$} \\
+Dimensionalities tested & \multicolumn{2}{c}{2, 5, 10, 20} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For Classical PSO, the inertia weight follows a linear decay schedule from 0.9 to 0.4, a strategy that promotes exploration in the early iterations and exploitation in the later stages \cite{Shi1998}. The cognitive and social coefficients are both set to $c_1 = c_2 = 1.494$, consistent with the constriction factor approach proposed by Clerc and Kennedy \cite{Clerc2002}. Velocity clamping at 20\% of the search range prevents particles from overshooting the feasible domain.
+
+For QPSO, the contraction--expansion coefficient $\beta$ follows a linear decay from 1.0 to 0.5, governing the balance between global exploration and local convergence in the quantum-mechanical update equation \cite{Sun2004}. The number of quantum circuit shots is set to 256, providing a balance between randomness quality and computational overhead when operating in the full Qiskit mode. Both algorithms incorporate a stagnation detection mechanism that triggers perturbation of the swarm when no improvement in the global best fitness is observed for 15 consecutive iterations.
+
+\subsection{Statistical Methodology}
+\label{subsec:statistics}
+
+Metaheuristic optimizers are stochastic by nature, and their performance on any single run is subject to random variation. A rigorous comparison therefore requires repeated independent trials and appropriate statistical testing. We adopt non-parametric statistical tests throughout this study, as the distributions of optimizer outputs cannot be assumed to follow a normal distribution \cite{Derrac2011}.
+
+For pairwise comparison between Classical PSO and QPSO on each benchmark function and dimensionality, we employ the Wilcoxon signed-rank test \cite{Wilcoxon1945}. This test evaluates whether the median difference in final best fitness values between the two algorithms is significantly different from zero, without requiring assumptions about the shape of the underlying distributions. It is particularly well-suited to the paired experimental design used here, where each algorithm is evaluated under identical random seeds.
+
+For overall ranking across multiple algorithm variants (including the three quantum randomness modes), we apply the Friedman test \cite{Friedman1937}, a non-parametric analogue of repeated-measures ANOVA. The Friedman test assigns ranks to algorithms within each benchmark--dimensionality combination and tests whether the observed rank differences are statistically significant. When the Friedman test indicates a significant difference, we apply post-hoc pairwise comparisons with appropriate correction for multiple testing.
+
+All statistical tests are conducted at a significance level of $\alpha = 0.05$. Effect sizes are reported alongside $p$-values to distinguish between statistically significant and practically meaningful differences.
+
+\subsection{Experimental Protocol}
+\label{subsec:protocol}
+
+To ensure a fair comparison, both algorithms are initialized with identical random seeds for each of the 30 independent runs. This paired design eliminates variability due to initial swarm configurations and isolates the algorithmic differences as the sole source of performance divergence. The random seed sequence is drawn from a fixed set and is consistent across all benchmark functions and dimensionalities.
+
+Each experimental run records the complete convergence history (global best fitness at every iteration), the final best fitness value, and the elapsed wall-clock time. From these raw outputs, we compute summary statistics including the mean, standard deviation, median, and best and worst final fitness values across the 30 runs. Convergence curves are plotted as the median trajectory with shaded interquartile ranges to provide a robust visual summary that is less sensitive to outliers than mean-based summaries.
+
+The framework also generates box plots for each benchmark--dimensionality combination, allowing direct visual comparison of the distributional spread of final fitness values. All visualizations follow publication-quality formatting conventions with consistent axis scales, color palettes, and labeling.
+
+The entire experimental pipeline is implemented in Python, using NumPy for numerical computation, SciPy for statistical testing \cite{Virtanen2020}, and Matplotlib for visualization. The Qiskit library \cite{Qiskit2024} provides the quantum circuit backend for the full and hybrid randomness modes. All source code, configuration files, and analysis scripts are included in the accompanying repository to enable full reproducibility of the reported results.

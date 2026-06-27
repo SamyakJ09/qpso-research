@@ -30,3 +30,5 @@ qpso:
   cognitive_coef: 1.494
   social_coef: 1.494
   shots: 256
+  momentum_decay: 0.7
+  momentum_weight: 0.1

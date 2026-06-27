@@ -1,0 +1,313 @@
+\section{Background and Related Work}
+\label{sec:background}
+
+This section reviews the mathematical foundations of the algorithms under
+study.  We begin with the classical Particle Swarm Optimisation framework and
+its principal refinements, proceed to the Quantum-Behaved extension and the
+Weighted Mean Best improvement, and conclude with a brief survey of the
+benchmark functions employed in our experimental evaluation.
+
+%% ----------------------------------------------------------------
+\subsection{Classical Particle Swarm Optimisation}
+\label{sec:bg:pso}
+
+Particle Swarm Optimisation, introduced by Kennedy and Eberhart in
+1995~\cite{Kennedy1995}, models the collective behaviour of a swarm of
+$N$ particles moving through a $D$-dimensional search space.  Each particle
+$i$ maintains a position vector $\mathbf{x}_i \in \mathbb{R}^D$ and a
+velocity vector $\mathbf{v}_i \in \mathbb{R}^D$.  At every iteration $t$, the
+velocity is updated according to the cognitive--social rule and the position is
+advanced accordingly:
+\begin{align}
+  \mathbf{v}_i^{t+1} &= w\,\mathbf{v}_i^{t}
+    + c_1\,\mathbf{r}_1 \odot \bigl(\mathbf{pbest}_i - \mathbf{x}_i^{t}\bigr)
+    + c_2\,\mathbf{r}_2 \odot \bigl(\mathbf{gbest} - \mathbf{x}_i^{t}\bigr),
+  \label{eq:pso_velocity} \\[4pt]
+  \mathbf{x}_i^{t+1} &= \mathbf{x}_i^{t} + \mathbf{v}_i^{t+1},
+  \label{eq:pso_position}
+\end{align}
+where $\mathbf{pbest}_i$ denotes the best position visited by particle~$i$
+since initialisation, $\mathbf{gbest}$ denotes the best position found by any
+particle in the swarm, $c_1$ and $c_2$ are the cognitive and social
+acceleration coefficients, $\mathbf{r}_1$ and $\mathbf{r}_2$ are vectors of
+independent uniform random variables drawn from $\mathcal{U}(0,1)$, and
+$\odot$ represents the Hadamard (element-wise) product.  The scalar $w$ is the
+\emph{inertia weight}, introduced by Shi and Eberhart~\cite{Shi1998} to
+control the influence of the particle's previous velocity on its current
+trajectory.
+
+The inertia weight plays a critical role in balancing exploration and
+exploitation.  A large value of $w$ encourages broad search by preserving the
+particle's momentum, while a small value promotes local refinement by damping
+velocity and allowing the cognitive and social terms to dominate.  In practice,
+$w$ is commonly decayed linearly from an initial value $w_{\max}$ to a final
+value $w_{\min}$ over the course of the optimisation:
+\begin{equation}
+  w(t) = w_{\max} - \frac{t}{T}\bigl(w_{\max} - w_{\min}\bigr),
+  \label{eq:inertia_decay}
+\end{equation}
+where $T$ is the total number of iterations.  Typical choices are
+$w_{\max} = 0.9$ and $w_{\min} = 0.4$, values that have been found to provide
+a good balance across a variety of benchmark landscapes.
+
+Clerc and Kennedy provided an alternative perspective through the
+\emph{constriction coefficient} approach~\cite{Clerc2002}.  By analysing the
+eigenvalues of the recurrence relation governing particle trajectories, they
+showed that convergence to a fixed point is guaranteed when the sum of the
+acceleration coefficients exceeds a critical threshold, $c_1 + c_2 > 4$, and a
+constriction factor $\chi$ is applied:
+\begin{equation}
+  \chi = \frac{2}{\bigl|2 - \varphi - \sqrt{\varphi^2 - 4\varphi}\,\bigr|},
+  \qquad \varphi = c_1 + c_2 > 4.
+  \label{eq:constriction}
+\end{equation}
+The velocity update then becomes
+$\mathbf{v}_i^{t+1} = \chi\bigl[\mathbf{v}_i^{t} + c_1\,\mathbf{r}_1 \odot
+(\mathbf{pbest}_i - \mathbf{x}_i^{t}) + c_2\,\mathbf{r}_2 \odot
+(\mathbf{gbest} - \mathbf{x}_i^{t})\bigr]$.  With $c_1 = c_2 = 2.05$ one
+obtains $\chi \approx 0.7298$, which yields a net cognitive and social pull
+equivalent to $c_1' = c_2' \approx 1.494$---precisely the parameterisation
+used in the present study.
+
+To prevent particles from acquiring unbounded velocities during the early
+exploration phase, a velocity clamping mechanism is applied.  The velocity in
+each dimension is clipped to the interval $[-v_{\max},\; v_{\max}]$, where
+$v_{\max}$ is typically set to a fraction of the search range.  This
+safeguard does not alter the convergence properties established by the
+constriction analysis but improves numerical stability in practice.
+
+
+%% ----------------------------------------------------------------
+\subsection{Quantum-Behaved Particle Swarm Optimisation}
+\label{sec:bg:qpso}
+
+Classical PSO updates particle positions through deterministic velocity
+increments, a mechanism that confines each particle to a trajectory governed by
+its current velocity and the attractor landscape defined by personal and global
+bests.  Sun, Feng, and Xu observed that this trajectory-based formulation
+prevents particles from escaping deep local basins unless stochastic
+perturbations are large enough to vault over the intervening
+barrier~\cite{Sun2004}.  Drawing on the quantum-mechanical concept of a
+particle bound in a potential well---where the wave function extends beyond the
+classical turning points with exponentially decaying amplitude---they proposed
+QPSO, a variant in which particles have no velocity and their positions are
+instead sampled from a probability distribution that inherently permits
+\emph{tunnelling} through potential barriers.
+
+The derivation proceeds from a simplified quantum model.  Consider a particle
+moving in a one-dimensional delta potential well centred at an attractor
+point~$p$.  The time-independent Schr\"odinger equation yields a ground-state
+wave function
+$\psi(x) \propto \exp\bigl(-|x - p|/L\bigr)$,
+whose squared modulus gives the position probability density
+$|\psi(x)|^2 \propto \exp\bigl(-2\,|x - p|/L\bigr)$.
+The characteristic length $L$ controls the spatial extent of the distribution:
+a large $L$ produces a broad, exploratory distribution, while a small $L$
+yields a narrow, exploitative one.  Sampling from this double-exponential
+distribution via inverse transform sampling gives the position update rule
+that forms the core of QPSO.
+
+In the multi-dimensional formulation, the attractor point for particle~$i$ at
+iteration~$t$ is computed as a random interpolation between the particle's
+personal best and the swarm's global best:
+\begin{equation}
+  \mathbf{p}_i = \boldsymbol{\phi} \odot \mathbf{pbest}_i
+    + (\mathbf{1} - \boldsymbol{\phi}) \odot \mathbf{gbest},
+  \label{eq:qpso_attractor}
+\end{equation}
+where $\boldsymbol{\phi}$ is a vector of independent uniform random variables
+on $[0,1]$.  The \emph{mean best position} (mbest) is defined as the centroid
+of all personal bests in the swarm:
+\begin{equation}
+  \mathbf{mbest} = \frac{1}{N} \sum_{j=1}^{N} \mathbf{pbest}_j.
+  \label{eq:mbest}
+\end{equation}
+The quantum displacement for particle~$i$ is then
+\begin{equation}
+  \boldsymbol{\delta}_i = \beta\,
+    \bigl|\mathbf{mbest} - \mathbf{x}_i^{t}\bigr|
+    \odot \ln\!\Bigl(\frac{1}{\mathbf{u}}\Bigr),
+  \label{eq:qpso_displacement}
+\end{equation}
+where $\beta$ is the \emph{contraction--expansion coefficient} and
+$\mathbf{u}$ is a vector of independent uniform random variables on $(0,1)$.
+The logarithmic term arises from the inverse CDF of the double-exponential
+distribution, and the factor $|\mathbf{mbest} - \mathbf{x}_i^{t}|$ scales the
+step size in proportion to the particle's distance from the swarm's consensus
+position, ensuring that outlying particles explore more broadly while
+particles near the consensus region exploit more intensively.
+
+The position is updated by adding or subtracting the displacement from the
+attractor:
+\begin{equation}
+  \mathbf{x}_i^{t+1} = \mathbf{p}_i \pm \boldsymbol{\delta}_i,
+  \label{eq:qpso_update}
+\end{equation}
+where the sign is chosen independently for each dimension with equal
+probability.  This binary sign decision constitutes the \emph{tunnelling
+direction}: a positive sign moves the particle outward from the attractor,
+while a negative sign moves it inward.  In our framework, this sign is the
+quantity most naturally suited to generation by a quantum circuit, as it is an
+inherently discrete, binary random variable.
+
+The contraction--expansion coefficient $\beta$ controls the width of the
+quantum potential well and is analogous to the inertia weight in classical PSO.
+Following the guidelines of Sun et al.~\cite{Sun2012}, $\beta$ is decayed
+linearly from an initial value $\beta_{\max}$ (broad exploration) to a final
+value $\beta_{\min}$ (tight exploitation) over the course of the optimisation:
+\begin{equation}
+  \beta(t) = \beta_{\max}
+    - \frac{t}{T}\bigl(\beta_{\max} - \beta_{\min}\bigr).
+  \label{eq:beta_decay}
+\end{equation}
+Sun et al.\ recommended $\beta_{\max} = 1.0$ and $\beta_{\min} = 0.5$ as
+default values, and their analysis of individual particle behaviour confirmed
+that this range ensures convergence while maintaining sufficient
+diversity~\cite{Sun2012}.  In our implementation, we additionally widen $\beta$
+by a factor of 1.3 when stagnation is detected, temporarily broadening the
+quantum well to facilitate escape from local basins before resuming the
+standard decay schedule.
+
+
+%% ----------------------------------------------------------------
+\subsection{Weighted Mean Best Position (WQPSO)}
+\label{sec:bg:wqpso}
+
+The standard mean best position defined in Equation~\eqref{eq:mbest} assigns
+equal weight to every particle's personal best, regardless of its fitness.  On
+valley-type landscapes such as the Rosenbrock function, this can be
+problematic: particles that have settled on the valley floor and those that
+remain on the surrounding plateau contribute equally to $\mathbf{mbest}$,
+pulling the consensus reference away from the narrow region of high-quality
+solutions.
+
+Xi, Sun, and Xu proposed an improved variant, Weighted QPSO
+(WQPSO)~\cite{Xi2008}, in which each particle's contribution to the mean best
+position is weighted by the inverse of its fitness.  Specifically, the
+fitness-weighted mean best is defined as
+\begin{equation}
+  \mathbf{mbest}_w = \sum_{j=1}^{N} w_j\,\mathbf{pbest}_j,
+  \qquad
+  w_j = \frac{f_{\max} - f_j + \epsilon\,(f_{\max} - f_{\min})}
+             {\displaystyle\sum_{k=1}^{N}
+              \bigl[f_{\max} - f_k + \epsilon\,(f_{\max} - f_{\min})\bigr]},
+  \label{eq:wqpso_mbest}
+\end{equation}
+where $f_j$ denotes the fitness of particle~$j$'s personal best, $f_{\max}$
+and $f_{\min}$ are the worst and best fitness values in the swarm, and
+$\epsilon$ is a small positive constant (set to 0.01 in our implementation)
+that prevents any particle from receiving zero weight.  Under this scheme,
+particles with superior fitness exert a stronger pull on the consensus
+reference, biasing $\mathbf{mbest}_w$ toward the most promising region of the
+search space.
+
+The effect of fitness weighting is most pronounced on landscapes with narrow,
+curved valleys.  On the Rosenbrock function, for instance, the global minimum
+lies at the bottom of a parabolic valley that curves through the search space.
+Particles that have descended into the valley possess substantially lower
+fitness values than those that remain on the plateau, and the weighted mean
+best consequently tracks the valley floor more closely than the unweighted
+centroid.  This tighter alignment between the consensus reference and the
+optimal region accelerates convergence along the valley without sacrificing
+the broader exploratory behaviour governed by the contraction--expansion
+coefficient~$\beta$.
+
+In the implementation used in this work, QPSO always employs the
+fitness-weighted mean best of Equation~\eqref{eq:wqpso_mbest}, while classical
+PSO uses the standard unweighted formulation for its internal mbest tracking.
+This choice reflects the finding of Xi et al.\ that the weighted variant
+consistently matches or outperforms the original on the benchmark suite
+considered, with no additional computational overhead beyond the weight
+calculation itself.
+
+
+%% ----------------------------------------------------------------
+\subsection{Benchmark Functions}
+\label{sec:bg:benchmarks}
+
+To evaluate and compare optimisation algorithms, the community has developed a
+standard collection of test functions whose landscape characteristics---number
+of local optima, separability, conditioning, and valley structure---are well
+understood.  The six functions employed in this study are summarised below and
+in Table~\ref{tab:benchmarks}.
+
+The \textbf{Sphere} function $f(\mathbf{x}) = \sum_{d=1}^{D} x_d^2$ is the
+simplest benchmark: unimodal, separable, and symmetric about the origin.  Its
+sole purpose is to verify that an algorithm converges at all and to establish a
+baseline convergence rate.  Any competent swarm algorithm should solve the
+Sphere function to machine precision within a modest iteration budget.
+
+The \textbf{Rastrigin} function, introduced by Rastrigin in
+1974~\cite{Rastrigin1974}, adds a cosine modulation to the Sphere:
+$f(\mathbf{x}) = 10D + \sum_{d=1}^{D}\bigl[x_d^2 - 10\cos(2\pi x_d)\bigr]$.
+This creates a regular grid of $\mathcal{O}(10^D)$ local minima separated by
+barriers of height proportional to the cosine amplitude, making it one of the
+most demanding tests of a swarm's ability to escape local basins.
+
+The \textbf{Rosenbrock} function~\cite{Rosenbrock1960},
+$f(\mathbf{x}) = \sum_{d=1}^{D-1}\bigl[100(x_{d+1} - x_d^2)^2
++ (1 - x_d)^2\bigr]$, is unimodal in two dimensions but features a narrow,
+curved valley that is notoriously difficult for gradient-free methods to
+navigate.  The global minimum at $\mathbf{x}^* = (1,\ldots,1)$ lies at the
+bottom of this valley, and algorithms must track the valley floor over many
+iterations to reach it.
+
+The \textbf{Ackley} function~\cite{Ackley1987} combines an exponential term
+involving the root-mean-square of the coordinates with a cosine term involving
+the mean cosine:
+$f(\mathbf{x}) = -20\exp\bigl(-0.2\sqrt{\frac{1}{D}\sum x_d^2}\bigr)
+- \exp\bigl(\frac{1}{D}\sum\cos(2\pi x_d)\bigr) + 20 + e$.
+Its landscape is characterised by a nearly flat outer region with many shallow
+local minima surrounding a deep, narrow global basin at the origin, making it a
+stringent test of an algorithm's exploitation capability.
+
+The \textbf{Griewank} function~\cite{Griewank1981},
+$f(\mathbf{x}) = \frac{1}{4000}\sum x_d^2
+- \prod\cos\bigl(\frac{x_d}{\sqrt{d}}\bigr) + 1$,
+produces a landscape with a large number of regularly distributed local
+minima whose depth decreases with distance from the origin.  In low dimensions
+the function is highly multimodal, but in higher dimensions the product term
+dominates and the function becomes increasingly unimodal---an interesting
+property that tests whether an algorithm's behaviour scales appropriately with
+dimensionality.
+
+The \textbf{Schwefel} function~\cite{Schwefel1981},
+$f(\mathbf{x}) = 418.9829\,D - \sum x_d\sin\!\bigl(\sqrt{|x_d|}\bigr)$,
+is particularly deceptive because the global minimum at
+$\mathbf{x}^* \approx (420.97,\ldots,420.97)$ is geometrically distant from
+the next-best local minima.  Algorithms that converge prematurely to the
+nearest local basin have little chance of reaching the global optimum.
+
+\begin{table}[t]
+\centering
+\caption{Benchmark functions used in the experimental evaluation.}
+\label{tab:benchmarks}
+\begin{tabular}{llccc}
+\toprule
+\textbf{Function} & \textbf{Landscape type} & \textbf{Bounds}
+  & \textbf{$f(\mathbf{x}^*)$} & \textbf{$\mathbf{x}^*$} \\
+\midrule
+Sphere     & Unimodal, separable
+  & $[-10,\; 10]^D$         & 0 & $\mathbf{0}$ \\
+Rastrigin  & Multimodal, separable
+  & $[-5.12,\; 5.12]^D$     & 0 & $\mathbf{0}$ \\
+Rosenbrock & Valley, non-separable
+  & $[-2.048,\; 2.048]^D$   & 0 & $\mathbf{1}$ \\
+Ackley     & Multimodal, non-separable
+  & $[-32.768,\; 32.768]^D$ & 0 & $\mathbf{0}$ \\
+Griewank   & Multimodal, non-separable
+  & $[-600,\; 600]^D$       & 0 & $\mathbf{0}$ \\
+Schwefel   & Deceptive, separable
+  & $[-500,\; 500]^D$       & 0 & $\approx 420.97$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Together, these six functions span a representative range of landscape
+topologies.  The Sphere and Rosenbrock functions test convergence speed and
+valley-following ability on unimodal landscapes.  The Rastrigin, Ackley, and
+Griewank functions test escape from local optima under varying degrees of
+multimodality.  The Schwefel function tests resilience against deceptive
+gradients.  By evaluating all algorithm--mode combinations across this suite,
+we obtain a comprehensive picture of relative performance that is unlikely to
+be dominated by the idiosyncrasies of a single landscape.

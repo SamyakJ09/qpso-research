@@ -21,6 +21,43 @@ def compute_mean_best(personal_bests: list[np.ndarray]) -> np.ndarray:
     return np.mean(personal_bests, axis=0)
 
 
+def compute_weighted_mean_best(
+    personal_bests: list[np.ndarray],
+    best_scores: list[float],
+) -> np.ndarray:
+    """
+    Weighted Mean Best Position (WQPSO) — fitness-weighted average of personal bests.
+
+    Particles with better fitness contribute more to mbest, biasing the
+    swarm reference toward higher-quality regions.  This is particularly
+    effective on narrow-valley functions like Rosenbrock where the
+    unweighted mean can be pulled away from the valley floor by distant,
+    poorly-performing particles.
+
+    Reference:
+      Xi M, Sun J, Xu W. "An improved quantum-behaved particle swarm
+      optimization algorithm with weighted mean best position."
+      Applied Mathematics and Computation 205(2):1-15, 2008.
+    """
+    scores = np.array(best_scores)
+    positions = np.array(personal_bests)
+
+    # Invert scores so lower (better) fitness → higher weight.
+    # Shift so the worst score maps to a small positive weight.
+    worst = scores.max()
+    best = scores.min()
+    score_range = worst - best
+    if score_range < 1e-30:
+        # All particles have effectively equal fitness; fall back to uniform.
+        return np.mean(positions, axis=0)
+
+    # Weight: how far each particle's score is from the worst.
+    weights = (worst - scores) + score_range * 0.01  # small floor to avoid zero
+    weights /= weights.sum()
+
+    return np.average(positions, axis=0, weights=weights)
+
+
 def scatter_worst_particles(particles, global_best_pos: np.ndarray,
                             bounds: tuple[float, float], fraction: float = 0.3):
     """

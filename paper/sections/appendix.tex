@@ -1,0 +1,190 @@
+\section{Benchmark Function Definitions}
+\label{app:benchmarks}
+
+\Cref{tab:benchmark-formulas} provides the complete mathematical definitions
+of all benchmark functions used in this study.  Each function is a standard
+test problem drawn from the optimisation literature.
+
+\begin{table}[H]
+\centering
+\caption{Mathematical definitions of the six benchmark functions.}
+\label{tab:benchmark-formulas}
+\renewcommand{\arraystretch}{1.6}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Function} & \textbf{Definition} \\
+\midrule
+Sphere
+  & $f(\vect{x}) = \displaystyle\sum_{i=1}^{n} x_i^{2}$ \\
+Rastrigin
+  & $f(\vect{x}) = 10n + \displaystyle\sum_{i=1}^{n}
+    \bigl[x_i^{2} - 10\cos(2\pi x_i)\bigr]$ \\
+Rosenbrock
+  & $f(\vect{x}) = \displaystyle\sum_{i=1}^{n-1}
+    \bigl[100(x_{i+1} - x_i^{2})^{2} + (1 - x_i)^{2}\bigr]$ \\
+Ackley
+  & $f(\vect{x}) = -20\exp\!\Bigl(-0.2\sqrt{\frac{1}{n}
+    \sum_{i=1}^{n} x_i^{2}}\Bigr)
+    - \exp\!\Bigl(\frac{1}{n}\sum_{i=1}^{n}\cos(2\pi x_i)\Bigr)
+    + 20 + e$ \\
+Griewank
+  & $f(\vect{x}) = \displaystyle\frac{1}{4000}\sum_{i=1}^{n} x_i^{2}
+    - \prod_{i=1}^{n}\cos\!\Bigl(\frac{x_i}{\sqrt{i}}\Bigr) + 1$ \\
+Schwefel
+  & $f(\vect{x}) = 418.9829\,n
+    - \displaystyle\sum_{i=1}^{n} x_i\sin\!\bigl(\sqrt{|x_i|}\bigr)$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\section{Key Source Code Listings}
+\label{app:code}
+
+The following listings present the core algorithmic components of the
+framework.  The complete source code is available in the accompanying
+repository.
+
+\subsection{QPSO Position Update}
+\label{app:qpso-update}
+
+The central loop of the QPSO algorithm applies the quantum-inspired
+position update to every particle at each iteration.
+
+\begin{minted}{python}
+# Core QPSO position update (from qpso.py)
+for i, particle in enumerate(self.swarm):
+    # Attractor: weighted combination of personal and global best
+    phi = r1[i]
+    attractor = phi * particle.best_pos + (1 - phi) * self.global_best_pos
+
+    # Quantum displacement
+    delta = beta * np.abs(mbest - particle.position) * np.log(1.0 / u[i])
+
+    # Tunnelling: sign determines direction
+    particle.position = np.where(
+        sign[i] > 0,
+        attractor + delta,
+        attractor - delta,
+    )
+
+    # Enforce search bounds
+    particle.position = np.clip(particle.position, self.bounds[0], self.bounds[1])
+\end{minted}
+
+
+\subsection{Weighted Mean Best Computation}
+\label{app:wqpso}
+
+The fitness-weighted mean best position biases the swarm reference
+point toward higher-quality regions of the search space.
+
+\begin{minted}{python}
+# Weighted mean best (WQPSO) — from convergence.py
+def compute_weighted_mean_best(
+    personal_bests: list[np.ndarray],
+    best_scores: list[float],
+) -> np.ndarray:
+    scores = np.array(best_scores)
+    worst = scores.max()
+    score_range = worst - scores.min()
+    weights = (worst - scores) + score_range * 0.01
+    weights /= weights.sum()
+    positions = np.array(personal_bests)
+    return np.average(positions, axis=0, weights=weights)
+\end{minted}
+
+
+\subsection{Quantum Circuit — Beta-Biased Random Sign}
+\label{app:quantum-circuit}
+
+For the \texttt{full} and \texttt{hybrid} modes, the tunnelling sign is
+sampled from a single-qubit circuit whose measurement bias is controlled
+by the contraction--expansion coefficient~$\beta$.
+
+\begin{minted}{python}
+# Quantum circuit for beta-biased sign (from quantum_engine.py)
+from qiskit import QuantumCircuit
+
+qc = QuantumCircuit(1, 1)
+qc.h(0)                     # Hadamard: uniform superposition
+qc.ry(beta * np.pi, 0)      # RY rotation: bias toward |1>
+qc.measure(0, 0)             # collapse to classical bit
+
+# P(|1>) = sin^2(beta * pi / 2)
+# High beta -> P ~ 0.5 (broad exploration)
+# Low beta  -> P ~ 0.15 (tight exploitation)
+\end{minted}
+
+
+\subsection{Stagnation Detection and Scatter}
+\label{app:stagnation}
+
+When the global best score fails to improve for a configurable number
+of consecutive iterations, the worst-performing fraction of the swarm
+is re-scattered near the current best position.
+
+\begin{minted}{python}
+# Stagnation scatter — from convergence.py
+def scatter_worst_particles(particles, global_best_pos, bounds, fraction=0.3):
+    ranked = sorted(particles, key=lambda p: p.best_score, reverse=True)
+    n_scatter = max(1, int(len(particles) * fraction))
+    search_range = bounds[1] - bounds[0]
+    spread = search_range * 0.15
+
+    for p in ranked[:n_scatter]:
+        noise = np.random.uniform(-spread, spread, size=p.position.shape)
+        p.position = np.clip(
+            global_best_pos + noise, bounds[0], bounds[1]
+        )
+        p.best_score = float("inf")
+        p.best_pos = p.position.copy()
+\end{minted}
+
+
+\section{Reproduction Guide}
+\label{app:reproduction}
+
+To reproduce the experiments reported in this paper, follow these steps:
+
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Clone the repository} and navigate to the project root:
+    \begin{minted}{bash}
+git clone <repository-url>
+cd PY
+    \end{minted}
+
+    \item \textbf{Create a virtual environment} and install the package:
+    \begin{minted}{bash}
+python -m venv .venv
+# Linux / macOS:
+source .venv/bin/activate
+# Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+# Windows (Git Bash / MSYS2):
+source .venv/Scripts/activate
+
+pip install -e ".[dev]"
+    \end{minted}
+
+    \item \textbf{Run the quick test} to verify the installation:
+    \begin{minted}{bash}
+pytest -v
+python experiments/run_comparison.py --benchmark sphere --dims 2
+    \end{minted}
+
+    \item \textbf{Run the full study} with the publication configuration:
+    \begin{minted}{bash}
+python experiments/run_full_study.py --config configs/publication.yaml
+    \end{minted}
+    This produces convergence histories in \texttt{results/raw/},
+    figures in \texttt{results/figures/}, and statistical summaries
+    in \texttt{results/summary/}.
+
+    \item \textbf{(Optional) Enable quantum modes:}
+    \begin{minted}{bash}
+pip install -e ".[quantum]"
+    \end{minted}
+    Then add \texttt{full} or \texttt{hybrid} to the \texttt{qpso\_modes}
+    list in your YAML configuration file.
+\end{enumerate}

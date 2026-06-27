@@ -1,0 +1,308 @@
+\section{Methodology}
+\label{sec:methodology}
+
+This section describes the algorithms, randomness sources, convergence
+mechanisms, and software architecture that together constitute the experimental
+framework.  All design decisions are documented in sufficient detail to permit
+independent replication.
+
+%% ----------------------------------------------------------------
+\subsection{Algorithm Implementations}
+\label{sec:meth:algorithms}
+
+Both the classical PSO and the quantum-behaved QPSO are implemented as
+self-contained Python classes that share a common interface: each accepts an
+objective function, dimensionality, search bounds, and a set of
+hyperparameters, and returns a dictionary containing the best position, best
+score, convergence histories, and timing information.
+
+\subsubsection{Classical PSO}
+
+The PSO implementation follows the constriction coefficient formulation of
+Clerc and Kennedy~\cite{Clerc2002}, with $c_1 = c_2 = 1.494$, which
+corresponds to the analytically derived stable regime with
+$\varphi = c_1 + c_2 \approx 2.988$ and constriction factor
+$\chi \approx 0.7298$.  The inertia weight is decayed linearly from
+$w_{\max} = 0.9$ to $w_{\min} = 0.4$ over the iteration budget according to
+Equation~\eqref{eq:inertia_decay}.  Velocity clamping is enforced in every
+dimension: the maximum permissible speed is set to 20\% of the search range,
+i.e.\ $v_{\max} = 0.2\,(x_{\max} - x_{\min})$.  After the velocity update,
+each component is clipped to $[-v_{\max},\; v_{\max}]$ before being added to
+the position, and the resulting position is itself clipped to the search bounds
+to prevent particles from leaving the feasible region.
+
+A \emph{fine-tuning phase} is activated during the final 10\% of the iteration
+budget.  In this phase, the inertia weight is overridden to a fixed value of
+$0.3$, and the cognitive and social coefficients are both increased to $2.5$.
+The rationale is that, by the end of the optimisation, the swarm has
+typically converged to a small neighbourhood of the best-known solution, and
+the reduced inertia combined with stronger attraction to personal and global
+bests encourages intensive local search.  This mechanism is a variant of the
+common practice of switching to a local search strategy in the terminal phase
+of a metaheuristic run.
+
+\subsubsection{Quantum-Behaved QPSO}
+
+The QPSO implementation follows the canonical formulation of Sun et
+al.~\cite{Sun2004,Sun2012} as described in
+Section~\ref{sec:bg:qpso}, with the fitness-weighted mean best position of Xi
+et al.~\cite{Xi2008} replacing the standard unweighted centroid.  The
+contraction--expansion coefficient $\beta$ is decayed linearly from
+$\beta_{\max} = 1.0$ to $\beta_{\min} = 0.5$.  When the stagnation detector
+indicates that no improvement has occurred for half of the stagnation limit, a
+widening factor of 1.3 is applied to $\beta$ (capped at $\beta_{\max}$) to
+temporarily broaden the quantum well and facilitate escape from the current
+basin.
+
+The position update proceeds in four steps.  First, an attractor point
+$\mathbf{p}_i$ is computed as a random interpolation between the particle's
+personal best and the global best (Equation~\ref{eq:qpso_attractor}).  Second,
+a quantum displacement $\boldsymbol{\delta}_i$ is computed from the distance
+between the weighted mean best and the particle's current position, scaled by
+$\beta$ and the logarithmic inverse-CDF factor
+(Equation~\ref{eq:qpso_displacement}).  Third, the displacement is added to or
+subtracted from the attractor according to a binary tunnelling sign.  Fourth,
+a wave-packet momentum term is applied: each particle maintains an exponential
+moving average of its recent position changes, and a fraction of this momentum
+vector is added to the quantum-sampled position.  The momentum update for
+particle~$i$ is
+\begin{equation}
+  \mathbf{m}_i^{t+1} = \gamma_d\,\mathbf{m}_i^{t}
+    + (1 - \gamma_d)\,(\mathbf{x}_i^{t+1,\text{quantum}} - \mathbf{x}_i^{t}),
+  \label{eq:momentum_update}
+\end{equation}
+where $\gamma_d = 0.7$ is the momentum decay rate, and the final position is
+$\mathbf{x}_i^{t+1} = \mathbf{x}_i^{t+1,\text{quantum}}
++ \gamma_w\,\mathbf{m}_i^{t+1}$ with momentum weight $\gamma_w = 0.3$.  This
+mechanism is motivated by the observation that the standard QPSO position
+distribution models only the squared modulus $|\psi|^2$ of the wave function,
+discarding the momentum information $p = \hbar k$ encoded in the phase.
+Restoring a momentum component enables directional persistence that aids
+valley-following on functions such as Rosenbrock.
+
+The full QPSO position update is summarised in
+Algorithm~\ref{alg:qpso_update}.
+
+\begin{algorithm}[t]
+\caption{QPSO position update for particle $i$ at iteration $t$.}
+\label{alg:qpso_update}
+\begin{algorithmic}[1]
+\Require $\mathbf{pbest}_i$, $\mathbf{gbest}$, $\mathbf{mbest}_w$,
+         $\mathbf{x}_i^t$, $\mathbf{m}_i^t$, $\beta$
+\State $\boldsymbol{\phi} \leftarrow \text{Uniform}(0,1)^D$
+\State $\mathbf{p}_i \leftarrow \boldsymbol{\phi} \odot \mathbf{pbest}_i
+       + (1 - \boldsymbol{\phi}) \odot \mathbf{gbest}$
+       \Comment{Attractor}
+\State $\mathbf{u} \leftarrow \text{Uniform}(0.001,\, 0.999)^D$
+\State $\boldsymbol{\delta}_i \leftarrow \beta\,
+       |\mathbf{mbest}_w - \mathbf{x}_i^t| \odot
+       \ln(1/\mathbf{u})$
+       \Comment{Quantum displacement}
+\State $\mathbf{s} \leftarrow \text{sign drawn from mode}$
+       \Comment{$+1$ or $-1$ per dimension}
+\State $\mathbf{x}_i^{q} \leftarrow \mathbf{p}_i
+       + \mathbf{s} \odot \boldsymbol{\delta}_i$
+       \Comment{Quantum step}
+\State $\mathbf{m}_i^{t+1} \leftarrow \gamma_d\,\mathbf{m}_i^t
+       + (1 - \gamma_d)\,(\mathbf{x}_i^{q} - \mathbf{x}_i^t)$
+       \Comment{Momentum EMA}
+\State $\mathbf{x}_i^{t+1} \leftarrow \text{clip}\bigl(
+       \mathbf{x}_i^{q} + \gamma_w\,\mathbf{m}_i^{t+1},\;
+       x_{\min},\; x_{\max}\bigr)$
+\end{algorithmic}
+\end{algorithm}
+
+
+%% ----------------------------------------------------------------
+\subsection{Quantum Randomness Modes}
+\label{sec:meth:modes}
+
+A central contribution of this work is the systematic comparison of QPSO under
+three randomness sources, all accessed through a unified interface that
+isolates the source of randomness from the optimisation logic.  The three modes
+are summarised in Table~\ref{tab:modes}.
+
+\begin{table}[t]
+\centering
+\caption{Quantum randomness modes and their random value sources.}
+\label{tab:modes}
+\begin{tabular}{llll}
+\toprule
+\textbf{Mode} & \textbf{Continuous values}
+  & \textbf{Tunnelling sign}
+  & \textbf{Backend} \\
+\midrule
+\texttt{math}   & NumPy PRNG   & NumPy PRNG
+  & None (pure classical) \\
+\texttt{hybrid} & NumPy PRNG   & Qiskit $R_Y$ circuit
+  & AerSimulator \\
+\texttt{full}   & Qiskit $H$ circuits & Qiskit $R_Y$ circuit
+  & AerSimulator \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In \textbf{\texttt{math} mode}, every random quantity---the attractor
+interpolation weights $\boldsymbol{\phi}$, the displacement magnitude inputs
+$\mathbf{u}$, and the tunnelling sign---is generated by NumPy's Mersenne
+Twister pseudo-random number generator.  This mode serves as the baseline
+against which the quantum modes are compared.  It requires no quantum software
+dependencies and executes fastest among the three modes.
+
+In \textbf{\texttt{full} mode}, all random values are generated by quantum
+circuits executed on the Qiskit AerSimulator.  For each particle--dimension
+pair, three circuits are constructed per iteration.  The first two are
+single-qubit Hadamard circuits: a qubit initialised in the $|0\rangle$ state
+is passed through a Hadamard gate $H$ and measured, producing outcome $|1\rangle$
+with probability exactly $1/2$.  By repeating this circuit for a fixed number
+of \emph{shots} (measurement repetitions) and computing the fraction of
+$|1\rangle$ outcomes, a quantum-random floating-point value in $(0,1)$ is
+obtained with granularity $1/\text{shots}$.  These two values serve as the
+cognitive and social random weights $r_1$ and $r_2$.  The third circuit applies
+a Hadamard gate followed by a parameterised $R_Y(\beta\pi)$ rotation:
+\begin{equation}
+  R_Y(\theta) = \begin{pmatrix}
+    \cos(\theta/2) & -\sin(\theta/2) \\
+    \sin(\theta/2) & \phantom{-}\cos(\theta/2)
+  \end{pmatrix}.
+  \label{eq:ry_gate}
+\end{equation}
+After the combined $H \cdot R_Y(\beta\pi)$ operation, the probability of
+measuring $|1\rangle$ is
+\begin{equation}
+  P(|1\rangle) = \sin^2\!\biggl(\frac{\beta\pi}{2}\biggr).
+  \label{eq:prob_one}
+\end{equation}
+When $\beta$ is large (early exploration phase), $P(|1\rangle) \approx 0.5$,
+yielding an approximately unbiased coin flip.  As $\beta$ decays toward 0.5,
+$P(|1\rangle) \approx 0.15$, biasing the sign toward $+1$ (outward
+displacement) and thereby tightening the effective search radius.  The measured
+fraction of $|1\rangle$ outcomes simultaneously provides the displacement
+magnitude $u$ and, via thresholding at 0.5, the binary tunnelling sign.  All
+circuits for a single iteration are batched into a single job submitted to the
+backend, minimising communication overhead.
+
+In \textbf{\texttt{hybrid} mode}, only the tunnelling sign is drawn from a
+quantum circuit---the same $H + R_Y(\beta\pi)$ circuit described above---while
+all continuous random variables ($\boldsymbol{\phi}$, $\mathbf{u}$, $r_1$,
+$r_2$) are generated classically by NumPy.  The motivation for this split is
+that shot-based quantum measurements produce values with a granularity of
+$1/\text{shots}$.  With a typical shot count of 256, this yields a step size of
+approximately 0.004---too coarse for continuous quantities that enter
+multiplications and logarithms but entirely appropriate for a binary decision.
+The hybrid mode therefore restricts quantum circuits to the decision for which
+they are best suited: a genuinely binary random variable with a
+$\beta$-dependent bias.
+
+
+%% ----------------------------------------------------------------
+\subsection{Convergence Mechanisms}
+\label{sec:meth:convergence}
+
+Both PSO and QPSO incorporate several mechanisms designed to prevent premature
+convergence and to accelerate exploitation once the swarm has localised the
+global basin.
+
+\subsubsection{Mean Best Position}
+
+The mean best position $\mathbf{mbest}$ serves as the consensus reference for
+the swarm.  In classical PSO, it is computed as the unweighted arithmetic mean
+of all personal bests (Equation~\ref{eq:mbest}).  In QPSO, the
+fitness-weighted variant of Xi et al.\ (Equation~\ref{eq:wqpso_mbest}) is used
+instead.  The mean best position enters the QPSO displacement calculation
+directly: the quantum step size for each particle is proportional to its
+distance from $\mathbf{mbest}$, so particles far from the consensus naturally
+take larger steps (exploration) while particles near the consensus take smaller
+steps (exploitation).  This self-regulating behaviour is a distinctive
+advantage of the QPSO formulation over classical PSO, where exploration versus
+exploitation is controlled solely through the global inertia parameter.
+
+\subsubsection{Stagnation Detection and Worst-Particle Scatter}
+
+A stagnation detector monitors the global best score across iterations.  If no
+improvement exceeding a numerical tolerance of $10^{-10}$ is observed for a
+configurable number of consecutive iterations (the stagnation limit, set to 15
+by default), the detector triggers a recovery action: the worst-performing 30\%
+of particles---ranked by their personal best fitness---are re-initialised to
+random positions within a 15\% neighbourhood of the current global best.
+Their personal best scores are reset to infinity, forcing them to re-evaluate
+the landscape from fresh vantage points without disturbing the best solution
+found so far.  This mechanism provides a convergence guarantee in the weak
+sense: the swarm can never remain permanently trapped in a suboptimal region,
+because the periodic injection of new search points ensures ongoing
+exploration.
+
+\subsubsection{Elitist Local Refinement (QPSO)}
+
+Every five iterations, the QPSO algorithm applies a greedy local refinement to
+the global best position using two complementary strategies.  The first
+strategy is a \emph{differential mutation step}: two particles are selected at
+random, and the normalised difference between their personal bests defines a
+search direction.  The global best is perturbed along this direction by a step
+size proportional to $\beta$ and the search range.  On valley-type landscapes,
+particles tend to spread along the ridge, so the differential vector naturally
+aligns with the valley curvature, enabling the refinement to follow the
+valley floor.  The second strategy is a \emph{coordinate-wise Gaussian
+perturbation}: each dimension of the global best is independently perturbed by
+a zero-mean Gaussian with standard deviation $\sigma = 0.02\,\beta\,(x_{\max}
+- x_{\min})$, and the perturbation is accepted if and only if it improves the
+objective value.  Both strategies are greedy---improvements are incorporated
+immediately---and together they provide a local search capability that
+compensates for the inherently stochastic, non-directional nature of the
+quantum position update.
+
+\subsubsection{Fine-Tuning Phase (PSO)}
+
+As noted in Section~\ref{sec:meth:algorithms}, the classical PSO switches to a
+fine-tuning regime in the final 10\% of the iteration budget.  The inertia
+weight is reduced to 0.3 and the cognitive and social coefficients are both
+increased to 2.5, producing strong attraction toward the personal and global
+bests with minimal velocity carry-over.  This configuration aggressively
+exploits the neighbourhood of the current best solution and is analogous to the
+elitist refinement in QPSO, albeit implemented through the velocity update
+mechanism rather than through direct perturbation.
+
+
+%% ----------------------------------------------------------------
+\subsection{Software Architecture}
+\label{sec:meth:software}
+
+The framework is implemented as a Python package (\texttt{qpso\_research})
+with a modular architecture that separates concerns into distinct modules.
+The particle classes (\texttt{PSOParticle}, \texttt{QPSOParticle}) encapsulate
+position, velocity (or momentum), personal best tracking, and fitness
+evaluation.  The convergence utilities---mean best computation, weighted mean
+best computation, stagnation detection, and worst-particle scatter---reside in
+a shared module used by both optimisers.  The quantum engine is implemented as
+a standalone class that exposes two methods: \texttt{sample\_batch\_full()} for
+\texttt{full} mode and \texttt{sample\_signs\_only()} for \texttt{hybrid}
+mode.  The benchmark functions and their metadata (bounds, known optima) are
+registered in a dictionary that maps string names to dataclass instances,
+enabling configuration-driven experiment specification.
+
+A key design decision is the \emph{lazy import} of Qiskit.  The quantum engine
+module is imported only when the QPSO class is instantiated with
+\texttt{mode="full"} or \texttt{mode="hybrid"}.  In \texttt{math} mode, no
+quantum software is loaded, allowing the framework to run on systems where
+Qiskit is not installed.  This pattern reduces startup time and dependency
+footprint for users who wish to use only the classical algorithms.
+
+Experiments are configured through YAML files that specify the benchmark
+functions, dimensionalities, number of independent runs, swarm size, iteration
+budget, and all algorithm-specific hyperparameters.  A single configuration
+file defines an entire experimental campaign, and the experiment runner
+iterates over all combinations of benchmark, dimensionality, and algorithm
+mode.  Reproducibility is ensured through explicit seed control: the NumPy
+random seed is set at the beginning of each run, and the seed value is recorded
+alongside the results.  While the Qiskit AerSimulator is itself deterministic
+given a fixed seed, the interaction between NumPy and Qiskit random states is
+managed carefully to ensure that repeated executions of the same configuration
+file produce identical results.
+
+The results of each run---convergence histories, final scores, timing
+information, and iteration-to-success counts---are collected into structured
+data objects that support both tabular export (for statistical analysis) and
+programmatic access (for visualisation).  Statistical comparison utilities
+provide non-parametric hypothesis tests and effect-size calculations, enabling
+rigorous assessment of whether observed differences between algorithm--mode
+combinations are statistically significant.
