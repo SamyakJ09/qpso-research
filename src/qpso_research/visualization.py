@@ -127,31 +127,6 @@ def plot_comparison_4panel(
     plt.close()
 
 
-def plot_convergence(
-    result: dict,
-    title: str = "Convergence",
-    save_path: str | Path | None = None,
-) -> None:
-    """Plot best and average fitness over iterations for a single algorithm."""
-    plt.figure(figsize=(10, 5))
-    plt.plot(result["best_history"], label="Global Best", linewidth=2, color="royalblue")
-    plt.plot(result["avg_history"], label="Swarm Average", linewidth=1.5,
-             linestyle="--", color="tomato", alpha=0.8)
-    plt.xlabel("Iteration")
-    plt.ylabel("Fitness (lower = better)")
-    plt.title(title)
-    plt.legend()
-    plt.yscale("log")
-    plt.grid(True, which="both", alpha=0.3)
-    plt.tight_layout()
-
-    if save_path:
-        save_path = Path(save_path)
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(str(save_path), dpi=150)
-    plt.close()
-
-
 def plot_multirun_boxplot(
     pso_scores: list[float],
     qpso_scores: list[float],

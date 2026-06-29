@@ -24,8 +24,6 @@ class PSOConfig:
 class QPSOConfig:
     beta_start: float = 1.0
     beta_end: float = 0.5
-    cognitive_coef: float = 1.494
-    social_coef: float = 1.494
     shots: int = 256
     momentum_decay: float = 0.7
     momentum_weight: float = 0.1

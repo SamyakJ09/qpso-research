@@ -9,7 +9,8 @@ Single definitive PSO implementation with:
   - Fine-tuning phase in final 10% of iterations
   - Convergence guarantee mechanisms
 
-Source: pso_vs_qpsoTEST1.py (advanced version with all mechanisms).
+Based on Clerc & Kennedy (2002) constriction coefficient PSO with
+convergence guarantees via stagnation detection and particle scattering.
 """
 
 import time

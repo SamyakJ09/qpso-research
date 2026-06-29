@@ -25,6 +25,10 @@ dev = [
     "pytest>=7.0",
 ]
 
+[project.scripts]
+qpso-compare = "qpso_research.cli:run_comparison"
+qpso-study = "qpso_research.cli:run_full_study"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

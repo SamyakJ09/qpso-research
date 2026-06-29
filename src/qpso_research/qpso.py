@@ -45,7 +45,6 @@ import numpy as np
 
 from .particles import QPSOParticle
 from .convergence import (
-    compute_mean_best,
     compute_weighted_mean_best,
     scatter_worst_particles,
     StagnationDetector,
@@ -65,8 +64,6 @@ class QPSO:
     max_iterations    : int — stopping criterion
     beta_start        : float — initial quantum well size (broad exploration)
     beta_end          : float — final quantum well size (tight exploitation)
-    cognitive_coef    : float — c1, personal-best attraction weight
-    social_coef       : float — c2, global-best attraction weight
     stagnation_limit  : int — iterations without improvement before scatter
     success_threshold : float — score below this counts as "reached goal"
     mode              : str — "math", "full", or "hybrid"
@@ -86,8 +83,6 @@ class QPSO:
         max_iterations: int = 150,
         beta_start: float = 1.0,
         beta_end: float = 0.5,
-        cognitive_coef: float = 1.494,
-        social_coef: float = 1.494,
         stagnation_limit: int = 15,
         success_threshold: float = 1e-6,
         mode: str = "math",
@@ -105,8 +100,6 @@ class QPSO:
         self.max_iter = max_iterations
         self.beta_start = beta_start
         self.beta_end = beta_end
-        self.c1 = cognitive_coef
-        self.c2 = social_coef
         self.threshold = success_threshold
         self.mode = mode
         self.mom_decay = momentum_decay
@@ -188,30 +181,30 @@ class QPSO:
             beta = min(beta * 1.3, self.beta_start)  # widen well to escape
         return beta
 
-    def _get_random_values(self, beta: float) -> tuple:
+    def _get_random_values(self, beta: float) -> tuple[np.ndarray, np.ndarray]:
         """
         Get random values for position update based on mode.
 
-        Returns (r1_all, r2_all, u_all, sign_all) each of shape (n_particles, dims).
+        Returns (u_all, sign_all) each of shape (n_particles, dims).
         """
         if self.mode == "math":
-            r1_all = np.random.random((self.n, self.dims))
-            r2_all = np.random.random((self.n, self.dims))
             u_all = np.random.uniform(0.001, 0.999, (self.n, self.dims))
             sign_all = np.where(
                 np.random.random((self.n, self.dims)) < 0.5, 1.0, -1.0
             )
-            return r1_all, r2_all, u_all, sign_all
+            return u_all, sign_all
 
         elif self.mode == "full":
-            return self.qengine.sample_batch_full(self.n, self.dims, beta)
+            # sample_batch_full returns (r1, r2, u, sign) — discard r1/r2
+            _, _, u_all, sign_all = self.qengine.sample_batch_full(
+                self.n, self.dims, beta,
+            )
+            return u_all, sign_all
 
         else:  # hybrid
-            r1_all = np.random.random((self.n, self.dims))
-            r2_all = np.random.random((self.n, self.dims))
             u_all = np.random.uniform(0.001, 0.999, (self.n, self.dims))
             sign_all = self.qengine.sample_signs_only(self.n, self.dims, beta)
-            return r1_all, r2_all, u_all, sign_all
+            return u_all, sign_all
 
     def optimize(self, verbose: bool = True, goal_coords: list | None = None) -> dict:
         """
@@ -280,7 +273,7 @@ class QPSO:
                 self._refine_global_best(beta)
 
             # ── Get random values (mode-dependent) ────────────────
-            _, _, u_all, sign_all = self._get_random_values(beta)
+            u_all, sign_all = self._get_random_values(beta)
 
             # ── Quantum position update (canonical Sun et al.) ────
             # Enhanced with de Broglie wave-packet momentum: the
