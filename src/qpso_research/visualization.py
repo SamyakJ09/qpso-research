@@ -3,7 +3,6 @@ Visualization functions for PSO vs QPSO comparison.
 
 Provides:
   - plot_comparison_4panel(): signature 4-panel comparison plot
-  - plot_convergence(): single-algorithm convergence curve
   - plot_multirun_boxplot(): boxplot for multi-run statistical analysis
 """
 
@@ -144,7 +143,7 @@ def plot_multirun_boxplot(
 
     fig, ax = plt.subplots(figsize=(8, 5))
     data = [pso_scores, qpso_scores]
-    bp = ax.boxplot(data, labels=["PSO", f"QPSO ({qlabel})"],
+    bp = ax.boxplot(data, tick_labels=["PSO", f"QPSO ({qlabel})"],
                     patch_artist=True, widths=0.4)
     bp["boxes"][0].set_facecolor("tomato")
     bp["boxes"][0].set_alpha(0.6)
