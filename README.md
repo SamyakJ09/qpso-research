@@ -16,30 +16,49 @@ A publication-quality comparison framework for Classical PSO vs Quantum PSO (QPS
 
 ```bash
 # One-command setup (creates .venv, installs everything)
-bash setup.sh          # Linux/macOS/Git Bash
-setup.bat              # Windows CMD
+bash setup.sh          # Linux/macOS/Git Bash/Windows (Git Bash)
 
 # Or manually:
-python -m venv .venv
-source .venv/Scripts/activate   # Windows (Git Bash)
-source .venv/bin/activate       # Linux/macOS
+py -m venv .venv                 # Windows ('py' is the official launcher — see PEP 397)
+python3 -m venv .venv            # Linux/macOS
+source .venv/Scripts/activate    # Windows (Git Bash)
+source .venv/bin/activate        # Linux/macOS
 pip install -e ".[dev]"
 
 # For quantum modes (full/hybrid):
 pip install -e ".[quantum]"
+```
 
-# Run a single comparison
+## Running Experiments
+
+After installation, three equivalent methods are available — choose whichever works on your system:
+
+```bash
+# Method 1 — Installed commands (recommended, works everywhere)
+qpso-compare --benchmark sphere --dims 2 --mode math
+qpso-study --config configs/default.yaml
+
+# Method 2 — Module execution (works with 'py' on Windows, 'python3' on Unix)
+py -m qpso_research compare --benchmark sphere --dims 2
+py -m qpso_research study --config configs/default.yaml
+
+# Method 3 — Script execution
 python experiments/run_comparison.py --benchmark sphere --dims 2 --mode math
-
-# Run with a config file
-python experiments/run_comparison.py --config configs/default.yaml --benchmark rastrigin --dims 5
-
-# Run the full study
 python experiments/run_full_study.py --config configs/default.yaml
 
 # Run tests
 pytest -v
 ```
+
+## Windows Troubleshooting
+
+If you see *"Python was not found; run without arguments to install from the Microsoft Store"*:
+
+Windows 10/11 ships with app-execution aliases that intercept the bare `python` command and redirect to the Microsoft Store. Three fixes, from easiest to most permanent:
+
+1. **Use `py` instead of `python`** — The [Python Launcher](https://peps.python.org/pep-0397/) (`py`) ships with every python.org install and is immune to the Store alias. The setup scripts and all documented commands use `py` by default.
+2. **Disable the alias permanently** — Open **Settings > Apps > Advanced app settings > App execution aliases** and turn OFF `python.exe` and `python3.exe`.
+3. **Use the installed commands** — After `pip install -e ".[dev]"`, use `qpso-compare` and `qpso-study` directly. These are standalone executables that bypass `python` entirely.
 
 ## Project Structure
 
@@ -52,11 +71,13 @@ src/qpso_research/       Core library
   quantum_engine.py      Qiskit circuit engine (lazy import)
   convergence.py         mbest, stagnation detection, scatter
   config.py              YAML config loader
+  cli.py                 Console entry points (qpso-compare, qpso-study)
+  __main__.py            python -m qpso_research support
   statistics.py          Wilcoxon + Friedman tests
   visualization.py       4-panel plots, convergence curves, boxplots
   results.py             CSV/JSON persistence
 
-experiments/             Experiment runners
+experiments/             Thin wrappers (import from cli.py)
   run_comparison.py      Single-benchmark PSO vs QPSO
   run_full_study.py      Multi-benchmark statistical study
 
@@ -81,9 +102,10 @@ results/                 Auto-generated output (gitignored)
 
 ## Key Mechanisms
 
-- **Mean Best Position (mbest)**: Average of all personal bests, used as quantum reference centre
+- **Weighted Mean Best (WQPSO)**: Fitness-weighted average of personal bests, biases swarm toward better regions
+- **Wave-packet Momentum**: De Broglie-inspired directional persistence for ridge-following
 - **Stagnation Detection**: Worst 30% of particles scattered when no improvement detected
-- **Fine-tuning Phase**: Final 10% of iterations tighten search around best known position
+- **Elitist Refinement**: Differential + Gaussian local search on global best
 - **Beta Scheduling**: Linear decay from exploration (1.0) to exploitation (0.5) with stagnation widening
 
 ## License

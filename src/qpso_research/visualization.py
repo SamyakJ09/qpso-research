@@ -3,7 +3,6 @@ Visualization functions for PSO vs QPSO comparison.
 
 Provides:
   - plot_comparison_4panel(): signature 4-panel comparison plot
-  - plot_convergence(): single-algorithm convergence curve
   - plot_multirun_boxplot(): boxplot for multi-run statistical analysis
 """
 
@@ -127,31 +126,6 @@ def plot_comparison_4panel(
     plt.close()
 
 
-def plot_convergence(
-    result: dict,
-    title: str = "Convergence",
-    save_path: str | Path | None = None,
-) -> None:
-    """Plot best and average fitness over iterations for a single algorithm."""
-    plt.figure(figsize=(10, 5))
-    plt.plot(result["best_history"], label="Global Best", linewidth=2, color="royalblue")
-    plt.plot(result["avg_history"], label="Swarm Average", linewidth=1.5,
-             linestyle="--", color="tomato", alpha=0.8)
-    plt.xlabel("Iteration")
-    plt.ylabel("Fitness (lower = better)")
-    plt.title(title)
-    plt.legend()
-    plt.yscale("log")
-    plt.grid(True, which="both", alpha=0.3)
-    plt.tight_layout()
-
-    if save_path:
-        save_path = Path(save_path)
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(str(save_path), dpi=150)
-    plt.close()
-
-
 def plot_multirun_boxplot(
     pso_scores: list[float],
     qpso_scores: list[float],
@@ -169,7 +143,7 @@ def plot_multirun_boxplot(
 
     fig, ax = plt.subplots(figsize=(8, 5))
     data = [pso_scores, qpso_scores]
-    bp = ax.boxplot(data, labels=["PSO", f"QPSO ({qlabel})"],
+    bp = ax.boxplot(data, tick_labels=["PSO", f"QPSO ({qlabel})"],
                     patch_artist=True, widths=0.4)
     bp["boxes"][0].set_facecolor("tomato")
     bp["boxes"][0].set_alpha(0.6)

@@ -17,9 +17,9 @@ class _NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
-        if isinstance(obj, (np.integer,)):
+        if isinstance(obj, np.integer):
             return int(obj)
-        if isinstance(obj, (np.floating,)):
+        if isinstance(obj, np.floating):
             return float(obj)
         return super().default(obj)
 
@@ -52,8 +52,3 @@ def save_experiment_summary(summary: dict, filepath: str | Path) -> None:
         json.dump(summary, f, indent=2, cls=_NumpyEncoder)
 
 
-def load_experiment_summary(filepath: str | Path) -> dict:
-    """Load experiment summary from JSON."""
-    filepath = Path(filepath)
-    with open(filepath, "r") as f:
-        return json.load(f)

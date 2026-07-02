@@ -1,5 +1,5 @@
 # Full publication study — 6 benchmarks, 4 dimensions, 30 runs
-# Usage: python experiments/run_full_study.py --config configs/publication.yaml
+# Usage: qpso-study --config configs/publication.yaml
 
 benchmarks:
   - sphere
@@ -30,8 +30,6 @@ pso:
 qpso:
   beta_start: 1.0
   beta_end: 0.5
-  cognitive_coef: 1.494
-  social_coef: 1.494
   shots: 256
   momentum_decay: 0.7
   momentum_weight: 0.1

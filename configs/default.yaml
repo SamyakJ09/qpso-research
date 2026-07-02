@@ -1,5 +1,5 @@
 # Quick test configuration — 3 benchmarks, 2 dimensions, 5 runs
-# Usage: python experiments/run_full_study.py --config configs/default.yaml
+# Usage: qpso-study --config configs/default.yaml
 
 benchmarks:
   - sphere
@@ -27,8 +27,6 @@ pso:
 qpso:
   beta_start: 1.0
   beta_end: 0.5
-  cognitive_coef: 1.494
-  social_coef: 1.494
   shots: 256
   momentum_decay: 0.7
   momentum_weight: 0.1
