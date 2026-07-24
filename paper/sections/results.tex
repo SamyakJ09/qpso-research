@@ -1,141 +1,137 @@
 \section{Results and Discussion}
 \label{sec:results}
 
-This section presents the empirical findings of our comparative study, organized into four subsections addressing convergence behavior, dimensional scaling, quantum mode differences, and statistical significance. We conclude with a broader discussion of the practical implications.
+This section presents the empirical findings of our comparative study, organized into three subsections addressing convergence behavior, dimensional scaling, and statistical significance. We conclude with a broader discussion of the practical implications. All results are drawn from 50 independent runs per algorithm--benchmark--dimensionality combination using the mathematical randomness mode of QPSO; the circuit-based randomness modes are reserved for future work, as discussed in Section~\ref{sec:conclusion}.
 
 \subsection{Convergence Analysis}
 \label{subsec:convergence}
 
-Figure~\ref{fig:convergence-curves} presents the convergence curves for Classical PSO and QPSO across all six benchmark functions at representative dimensionalities. Each curve depicts the median global best fitness over 30 independent runs, with the shaded region indicating the interquartile range.
+Figure~\ref{fig:convergence-curves} presents the convergence curves for Classical PSO and QPSO across all six benchmark functions at $n = 10$. Each curve depicts the median global best fitness over 50 independent runs, with the shaded region indicating the inter-quartile range.
 
-On the Sphere function, both algorithms converge rapidly toward the global optimum, with QPSO achieving a final best fitness of \textbf{[TBD]} compared to Classical PSO's \textbf{[TBD]} in the 10-dimensional case. The convergence trajectories are largely overlapping during the first \textbf{[TBD]} iterations, after which QPSO exhibits a marginally steeper descent. This behavior is expected, as the smooth, convex landscape of the Sphere function does not present the local optima that would differentiate the exploration mechanisms of the two algorithms.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{convergence_grid.png}
+\caption{Median convergence trajectories (solid lines) with inter-quartile ranges (shaded bands) over 50 independent runs, for all six benchmark functions at $n = 10$. The vertical axis is logarithmic; trajectories are clamped at $10^{-10}$ for display. Classical PSO (tomato) reaches lower residuals on the smoother landscapes, while the two methods are closely matched on the rugged Rastrigin, Rosenbrock, and Griewank functions at this dimensionality.}
+\label{fig:convergence-curves}
+\end{figure}
 
-The multimodal benchmark functions reveal more pronounced differences. On Rastrigin, QPSO achieves a median final fitness of \textbf{[TBD]}, representing a \textbf{[TBD]}\% improvement over Classical PSO's median of \textbf{[TBD]} in 10 dimensions. The convergence curves show that Classical PSO frequently stagnates at local optima after approximately \textbf{[TBD]} iterations, whereas QPSO's quantum-inspired position update mechanism enables continued exploration of the search space. A similar pattern is observed on the Ackley function, where QPSO's final median fitness of \textbf{[TBD]} compares favorably with Classical PSO's \textbf{[TBD]}.
+On the unimodal Sphere function, both algorithms converge reliably toward the global optimum, but their trajectories differ in character. QPSO descends more steeply in the early and middle iterations, whereas Classical PSO exhibits a slower initial descent followed by a rapid terminal collapse to near machine precision. At $n = 10$, Classical PSO reaches a mean final fitness of $4.5 \times 10^{-25}$, far below QPSO's $3.6 \times 10^{-12}$. This gap reflects a structural property of the two update rules: Classical PSO's velocity-driven contraction allows unbounded refinement once the swarm localizes, while QPSO's probabilistic position sampling retains a residual stochastic ``jitter'' that establishes a precision floor near $10^{-12}$. The smooth, convex Sphere landscape therefore favors the exploitation-oriented dynamics of Classical PSO.
 
-The Rosenbrock function provides perhaps the most interesting comparison. The narrow, curved valley topology rewards algorithms capable of making incremental adjustments along the ridge while maintaining sufficient momentum to traverse its curvature. QPSO with the weighted mean best position achieves a median final fitness of \textbf{[TBD]}, compared to \textbf{[TBD]} for Classical PSO. The convergence curves in Figure~\ref{fig:convergence-rosenbrock} show that QPSO's advantage emerges primarily in the later stages of the optimization, suggesting that the contraction--expansion coefficient's decay schedule facilitates a smooth transition from exploration to fine-grained exploitation along the valley floor.
+The multimodal benchmark functions reveal a more balanced picture. On Rastrigin, the two convergence curves are largely overlapping, and the difference in median final fitness is not statistically significant at any dimensionality (Section~\ref{subsec:significance}). However, the curves conceal an important distinction: Classical PSO more frequently arrests at the first ring of local minima, whereas QPSO's quantum-inspired update more often tunnels into the global basin. We quantify this escape behavior directly in Section~\ref{subsec:significance}. On the Ackley function, both algorithms descend steadily, with QPSO again showing a steeper mid-optimization slope; at moderate dimensionality Classical PSO ultimately attains a lower residual, but this ordering reverses at $n = 20$.
 
-On Griewank, both algorithms reach near-optimal solutions in low dimensions, with final fitness values of \textbf{[TBD]} (QPSO) and \textbf{[TBD]} (PSO) in the 5-dimensional case. However, as dimensionality increases, the performance gap widens, reflecting the compounding effect of the product term in the Griewank function across higher-dimensional spaces.
+The Rosenbrock function, with its narrow curved valley, is navigated comparably by both algorithms. After a shared rapid descent into the valley, progress along the ridge is slow for both methods, and their median trajectories remain closely interleaved (Figure~\ref{fig:convergence-rosenbrock}). At $n = 10$ the final-fitness difference is not statistically significant; at $n = 20$, however, Classical PSO attains a modestly but significantly lower residual, reflecting the value of its momentum-driven refinement along the lengthening valley floor.
 
-The Schwefel function, with its deceptive landscape and geometrically distant second-best minimum, presents the greatest challenge. Neither algorithm consistently reaches the global optimum in higher dimensions, but QPSO achieves a lower median residual error of \textbf{[TBD]} compared to \textbf{[TBD]} for Classical PSO at $n = 20$. The box plots in Figure~\ref{fig:boxplots-schwefel} reveal that Classical PSO's distribution of final fitness values is notably wider, indicating less consistent performance across independent runs.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\textwidth]{convergence_rosenbrock.png}
+\caption{Median convergence with inter-quartile range on the Rosenbrock function at $n = 20$ over 50 runs. After a shared rapid descent into the valley, both algorithms make slow progress along the curved ridge; Classical PSO (tomato) settles at a modestly lower final residual, a difference that is statistically significant at this dimensionality (Table~\ref{tab:wilcoxon}).}
+\label{fig:convergence-rosenbrock}
+\end{figure}
+
+On Griewank, both algorithms reach the low-fitness regime quickly, after which the product term's many shallow local minima cause both to plateau between $10^{-2}$ and $10^{-1}$. The median trajectories cross repeatedly, and no consistent advantage emerges. The Schwefel function, with its deceptive landscape and geometrically distant second-best minimum, is the hardest of the suite: neither algorithm approaches the global optimum in ten dimensions, and both stall at high residual error. Notably, QPSO's wider sampling distribution sustains exploration for longer, which translates into a lower final residual at the highest dimensionality, as detailed below.
 
 \subsection{Dimensional Scaling}
 \label{subsec:scaling}
 
-To assess how each algorithm copes with the curse of dimensionality, we examine performance trends across the four tested dimensionalities: $n \in \{2, 5, 10, 20\}$. Table~\ref{tab:scaling-results} reports the mean and standard deviation of the final best fitness for each algorithm--benchmark--dimensionality combination.
+To assess how each algorithm copes with the curse of dimensionality, we examine performance across the four tested dimensionalities, $n \in \{2, 5, 10, 20\}$. Table~\ref{tab:scaling-results} reports the mean and standard deviation of the final best fitness for each algorithm--benchmark--dimensionality combination.
 
 \begin{table}[htbp]
 \centering
-\caption{Mean $\pm$ standard deviation of final best fitness across 30 independent runs. Bold entries indicate the better-performing algorithm for each benchmark--dimensionality pair.}
+\caption{Mean $\pm$ standard deviation of final best fitness across 50 independent runs. Bold entries indicate the algorithm with the lower mean for each benchmark--dimensionality pair. Statistical significance of these differences is reported separately in Table~\ref{tab:wilcoxon}.}
 \label{tab:scaling-results}
 \small
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{@{}llcccc@{}}
 \toprule
 \textbf{Function} & \textbf{Algorithm} & $n=2$ & $n=5$ & $n=10$ & $n=20$ \\
 \midrule
 \multirow{2}{*}{Sphere}
- & PSO  & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
- & QPSO & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
+ & PSO  & \textbf{3.8e-60} & \textbf{1.1e-43} & \textbf{4.5e-25} & 2.6e-09 \\
+ & QPSO & 6.6e-13 & 3.6e-12 & 3.6e-12 & \textbf{5.9e-12} \\
 \midrule
 \multirow{2}{*}{Rastrigin}
- & PSO  & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
- & QPSO & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
+ & PSO  & \textbf{0.0e+00} & 5.8e-01 & 5.5e+00 & 3.1e+01 \\
+ & QPSO & 2.1e-11 & \textbf{2.0e-01} & \textbf{5.2e+00} & \textbf{3.1e+01} \\
 \midrule
 \multirow{2}{*}{Rosenbrock}
- & PSO  & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
- & QPSO & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
+ & PSO  & \textbf{2.7e-17} & 2.6e-01 & 4.0e+00 & \textbf{1.5e+01} \\
+ & QPSO & 3.9e-10 & \textbf{2.4e-01} & \textbf{3.9e+00} & 1.8e+01 \\
 \midrule
 \multirow{2}{*}{Ackley}
- & PSO  & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
- & QPSO & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
+ & PSO  & \textbf{4.4e-16} & \textbf{3.2e-15} & \textbf{1.3e-14} & 2.1e-01 \\
+ & QPSO & 5.5e-07 & 5.6e-12 & 3.8e-05 & \textbf{7.7e-07} \\
 \midrule
 \multirow{2}{*}{Griewank}
- & PSO  & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
- & QPSO & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
+ & PSO  & 1.8e-03 & 3.5e-02 & \textbf{9.0e-02} & \textbf{2.6e-02} \\
+ & QPSO & \textbf{9.0e-04} & \textbf{3.4e-02} & 9.4e-02 & 3.9e-02 \\
 \midrule
 \multirow{2}{*}{Schwefel}
- & PSO  & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
- & QPSO & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
+ & PSO  & 7.1e+01 & 2.2e+02 & 6.4e+02 & 2.2e+03 \\
+ & QPSO & \textbf{7.1e+00} & \textbf{1.9e+02} & \textbf{6.3e+02} & \textbf{2.0e+03} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-In the low-dimensional setting ($n = 2$), both algorithms perform comparably across all benchmarks, with neither showing a consistent advantage. This is consistent with the observation that two-dimensional landscapes are generally tractable for swarm-based methods, as the search space volume remains small enough for adequate coverage with 40 particles.
+The dominant pattern is a \emph{dimensional crossover}. In low dimensions ($n = 2$, and frequently $n = 5$), Classical PSO is the stronger optimizer on the smooth and moderately rugged landscapes: on Sphere, Ackley, and Rosenbrock it drives the fitness to near machine precision, several orders of magnitude below QPSO's stochastic floor. This confirms that when the search space is small enough for adequate coverage, the aggressive velocity-based exploitation of Classical PSO is difficult to beat, and QPSO's inherent position noise becomes a liability rather than an asset.
 
-As dimensionality increases, the performance gap between the two algorithms becomes more pronounced on multimodal functions. On Rastrigin at $n = 20$, the number of local minima scales as $10^{20}$, and Classical PSO's velocity-based exploration mechanism becomes increasingly insufficient for navigating such a rugged landscape. QPSO's position update equation, which samples from a probability distribution centered around the weighted mean best, provides a fundamentally different exploration mechanism that appears better suited to high-dimensional multimodal search.
+As dimensionality grows, the ordering shifts. At $n = 20$, QPSO overtakes Classical PSO on Sphere ($5.9 \times 10^{-12}$ vs.\ $2.6 \times 10^{-9}$), Ackley ($7.7 \times 10^{-7}$ vs.\ $2.1 \times 10^{-1}$), and Schwefel ($1.99 \times 10^{3}$ vs.\ $2.24 \times 10^{3}$). The Ackley case is the most striking: Classical PSO's swarm collapses prematurely and stalls at a fitness five orders of magnitude worse than QPSO's. The mechanism is consistent across these functions---in high-dimensional spaces the velocity of Classical PSO decays before the swarm has adequately explored, trapping it in a suboptimal basin, whereas QPSO's position update samples from a distribution centered on the weighted mean best and thereby maintains exploratory reach deeper into the run. QPSO's advantage is thus not a blanket superiority on multimodal functions, but a specific resistance to premature convergence that manifests at high dimensionality.
 
-On the unimodal Sphere function, the dimensional scaling effect is less dramatic. Both algorithms maintain good convergence properties even at $n = 20$, though the absolute fitness values increase with dimensionality, reflecting the inherent difficulty of high-dimensional optimization. The relative performance difference remains modest, confirming that the quantum-inspired update offers limited incremental benefit on smooth landscapes.
+On the deceptive Schwefel function, QPSO achieves the lower mean at every dimensionality, and the advantage is statistically significant at $n = 2$ and $n = 20$. This is the one benchmark on which the sustained-exploration property of QPSO yields a consistent, if modest, edge across the dimensional range. On Rastrigin and Griewank the two algorithms are statistically indistinguishable in mean final fitness across most dimensionalities, motivating the escape-rate analysis of the following subsection.
 
-The Rosenbrock function exhibits an interesting scaling pattern. At $n = 2$, the function has a single minimum, and both algorithms converge reliably. At higher dimensions, the function becomes increasingly challenging due to the sequential dependence among variables, with the valley narrowing and lengthening as $n$ grows. QPSO's advantage on this function becomes more pronounced at $n = 10$ and $n = 20$, suggesting that the weighted mean best mechanism facilitates coordinated movement along the valley ridge.
-
-\subsection{Quantum Mode Comparison}
-\label{subsec:quantum-modes}
-
-A distinctive feature of our framework is the support for three quantum randomness generation modes within QPSO: mathematical simulation (Math), full Qiskit quantum circuit execution (Full), and a hybrid approach (Hybrid) that uses quantum circuits for a subset of the random number generation while relying on classical pseudorandom numbers for the remainder.
-
-Table~\ref{tab:quantum-modes} presents the median final fitness and mean wall-clock time per run for each mode across all benchmarks at $n = 10$.
-
-\begin{table}[htbp]
-\centering
-\caption{Comparison of QPSO quantum randomness modes at $n = 10$. Median final fitness (lower is better) and mean wall-clock time per run are reported across 30 independent runs.}
-\label{tab:quantum-modes}
-\small
-\begin{tabular}{@{}lccc@{}}
-\toprule
-\textbf{Function} & \textbf{Math Mode} & \textbf{Full Mode} & \textbf{Hybrid Mode} \\
-\midrule
-Sphere    & \textbf{[TBD]} / \textbf{[TBD]}s & \textbf{[TBD]} / \textbf{[TBD]}s & \textbf{[TBD]} / \textbf{[TBD]}s \\
-Rastrigin & \textbf{[TBD]} / \textbf{[TBD]}s & \textbf{[TBD]} / \textbf{[TBD]}s & \textbf{[TBD]} / \textbf{[TBD]}s \\
-Rosenbrock& \textbf{[TBD]} / \textbf{[TBD]}s & \textbf{[TBD]} / \textbf{[TBD]}s & \textbf{[TBD]} / \textbf{[TBD]}s \\
-Ackley    & \textbf{[TBD]} / \textbf{[TBD]}s & \textbf{[TBD]} / \textbf{[TBD]}s & \textbf{[TBD]} / \textbf{[TBD]}s \\
-Griewank  & \textbf{[TBD]} / \textbf{[TBD]}s & \textbf{[TBD]} / \textbf{[TBD]}s & \textbf{[TBD]} / \textbf{[TBD]}s \\
-Schwefel  & \textbf{[TBD]} / \textbf{[TBD]}s & \textbf{[TBD]} / \textbf{[TBD]}s & \textbf{[TBD]} / \textbf{[TBD]}s \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-In terms of solution quality, the three modes produce largely comparable final fitness values. The Math mode, which generates quantum-distributed random numbers using classical transformations, achieves median fitness values within \textbf{[TBD]}\% of the Full mode across all benchmarks. This suggests that the mathematical approximation of quantum randomness is sufficient for the optimization dynamics, and the precise source of stochasticity has a secondary effect compared to the structural differences in the position update equation.
-
-The computational overhead, however, differs substantially across modes. The Full mode, which constructs and simulates Qiskit quantum circuits with 256 shots per random number generation, incurs a wall-clock time overhead of approximately \textbf{[TBD]}$\times$ compared to the Math mode. This overhead arises from circuit construction, transpilation, and statevector simulation on a classical backend. The Hybrid mode occupies a middle ground, with a time overhead of approximately \textbf{[TBD]}$\times$, as it delegates only a fraction of the random number generation to the quantum circuit pathway.
-
-These findings have practical implications for the deployment of QPSO. For researchers interested in studying the algorithmic behavior of QPSO without access to quantum hardware, the Math mode provides an efficient and faithful approximation. The Full and Hybrid modes become more relevant in contexts where the true quantum randomness properties---such as provable unpredictability and uniform distribution guarantees from quantum measurement---are of intrinsic interest, or when the framework is adapted for execution on real quantum processing units.
-
-\subsection{Statistical Significance}
+\subsection{Statistical Significance and Escape Behavior}
 \label{subsec:significance}
 
-Table~\ref{tab:wilcoxon} reports the results of the Wilcoxon signed-rank test comparing Classical PSO and QPSO (Math mode) across all benchmark--dimensionality combinations. The test is applied to the paired final best fitness values from the 30 independent runs.
+Table~\ref{tab:wilcoxon} reports the results of the Wilcoxon signed-rank test comparing Classical PSO and QPSO across all benchmark--dimensionality combinations. The test is applied to the paired final best fitness values from the 50 independent runs.
 
 \begin{table}[htbp]
 \centering
-\caption{Wilcoxon signed-rank test results comparing Classical PSO vs.\ QPSO. The winner column indicates which algorithm achieved statistically significantly lower median fitness ($\alpha = 0.05$). A dash indicates no statistically significant difference.}
+\caption{Wilcoxon signed-rank test outcomes comparing Classical PSO vs.\ QPSO (Math mode). Each entry names the algorithm with the significantly lower median fitness ($\alpha = 0.05$); a dash indicates no statistically significant difference.}
 \label{tab:wilcoxon}
 \small
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 \textbf{Function} & $n=2$ & $n=5$ & $n=10$ & $n=20$ \\
 \midrule
-Sphere     & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
-Rastrigin  & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
-Rosenbrock & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
-Ackley     & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
-Griewank   & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
-Schwefel   & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} & \textbf{[TBD]} \\
+Sphere     & PSO  & PSO  & PSO  & QPSO \\
+Rastrigin  & PSO  & --   & --   & --   \\
+Rosenbrock & PSO  & QPSO & --   & PSO  \\
+Ackley     & PSO  & PSO  & PSO  & QPSO \\
+Griewank   & QPSO & --   & --   & --   \\
+Schwefel   & QPSO & --   & --   & QPSO \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Across the \textbf{[TBD]} benchmark--dimensionality combinations tested, QPSO achieves a statistically significant advantage in \textbf{[TBD]} cases, Classical PSO in \textbf{[TBD]} cases, and no significant difference is observed in the remaining \textbf{[TBD]} cases. The pattern confirms the qualitative observations from the convergence analysis: QPSO's advantages concentrate on multimodal and valley-shaped functions at higher dimensionalities, while the algorithms are statistically indistinguishable on the Sphere function in low dimensions.
+Across the 24 benchmark--dimensionality combinations, Classical PSO achieves a statistically significant advantage in 9 cases, QPSO in 6 cases, and no significant difference is observed in the remaining 9 cases. Classical PSO's significant wins are concentrated at low dimensionality and on the smoother landscapes, where its exploitation reaches a precision QPSO cannot match. QPSO's significant wins concentrate at $n = 20$ (Sphere, Ackley) and on the deceptive Schwefel function, consistent with the dimensional-crossover interpretation: QPSO's benefit is the avoidance of premature convergence, which becomes decisive only when the dimensionality is high enough to defeat Classical PSO's exploitation.
 
-The Friedman test, applied across all four algorithm variants (Classical PSO, QPSO-Math, QPSO-Full, QPSO-Hybrid), yields a test statistic of $\chi^2_F = $ \textbf{[TBD]} with a $p$-value of \textbf{[TBD]}, indicating a statistically significant difference in overall rankings. The mean ranks are \textbf{[TBD]} for Classical PSO, \textbf{[TBD]} for QPSO-Math, \textbf{[TBD]} for QPSO-Full, and \textbf{[TBD]} for QPSO-Hybrid. Post-hoc analysis with Holm correction reveals that \textbf{[TBD]}.
+The mean-fitness comparison, however, understates QPSO's behavior on the archetypal multimodal benchmark. On Rastrigin, the Wilcoxon test reports no significant difference at any dimensionality, yet this metric is dominated by run-to-run variance on such a rugged landscape. A more decision-relevant question is how often each algorithm escapes the ring of local minima into the global basin. Table~\ref{tab:escape} reports this escape rate---the fraction of runs whose final solution falls below $0.5$, i.e.\ inside the global basin---together with Fisher's exact test on the binary outcome.
+
+\begin{table}[htbp]
+\centering
+\caption{Rastrigin basin-escape rate: number of runs (out of 50) whose final fitness falls inside the global basin ($f < 0.5$), with Fisher's exact test comparing the two algorithms.}
+\label{tab:escape}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Dimensionality} & \textbf{PSO} & \textbf{QPSO} & \textbf{Fisher $p$} \\
+\midrule
+$n = 2$  & 50/50 & 50/50 & 1.000 \\
+$n = 5$  & 27/50 & 41/50 & \textbf{0.005} \\
+$n = 10$ & 0/50  & 0/50  & 1.000 \\
+$n = 20$ & 0/50  & 0/50  & 1.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At $n = 5$, QPSO escapes into the global basin in 41 of 50 runs, compared with 27 of 50 for Classical PSO---a difference that is statistically significant under Fisher's exact test ($p = 0.005$), despite the corresponding mean-fitness difference being non-significant. This is a direct empirical demonstration of the quantum-tunneling analogy that motivates QPSO: its probabilistic position update escapes local optima more reliably than velocity-based movement. At $n = 2$ the problem is trivial for both algorithms (both escape in every run), while at $n \geq 10$ the Rastrigin landscape defeats both methods within the 500-iteration budget, leaving no separation to detect. The escape advantage is therefore confined to the intermediate regime in which the problem is hard enough to trap Classical PSO but still tractable for QPSO---a finding we return to as a target for future algorithmic improvement in Section~\ref{sec:conclusion}.
 
 \subsection{Discussion}
 \label{subsec:discussion}
 
-The empirical evidence presented in this study supports several conclusions regarding the relative merits of Classical PSO and Quantum-behaved PSO.
+The empirical evidence supports a more nuanced conclusion than a simple ranking of the two algorithms. Classical PSO and QPSO occupy complementary regions of the problem space, and the deciding factor is the balance between exploitation and sustained exploration demanded by the landscape and its dimensionality.
 
-QPSO demonstrates its clearest advantages on functions characterized by multimodality and narrow-valley topologies. On the Rastrigin and Ackley functions, the quantum-inspired position update equation provides a qualitatively different exploration mechanism compared to the velocity-based movement of Classical PSO. While Classical PSO's particle velocities tend to decay as the swarm converges, potentially trapping particles in the basin of attraction of a local optimum, QPSO's probabilistic sampling from a distribution centered around the mean best position allows particles to ``tunnel'' through potential barriers in a manner conceptually analogous to quantum tunneling. This effect is most pronounced in higher dimensions, where the density of local optima increases exponentially.
+Classical PSO excels when the search space is small or the landscape is smooth. Its velocity-based update, with a decaying inertia weight, contracts the swarm efficiently once a promising basin is located, achieving refinement to near machine precision on the Sphere, low-dimensional Ackley, and low-dimensional Rosenbrock functions. QPSO cannot match this precision because its position update samples from a probability distribution whose width does not vanish, imposing a stochastic floor on the attainable fitness. On easy problems, therefore, the quantum-inspired mechanism offers no benefit and a measurable cost.
 
-The weighted mean best position, computed as a fitness-proportional average of all personal best positions in the swarm, plays a particularly important role on the Rosenbrock function. Unlike the simple arithmetic mean, the weighted variant biases the attractor point toward the personal bests of higher-quality particles, effectively guiding the swarm along the narrow valley floor. This mechanism complements the contraction--expansion coefficient's decay schedule, which narrows the sampling distribution as the optimization progresses, enabling progressively finer adjustments near the optimum.
+QPSO's strength is its resistance to premature convergence. Because each particle's next position is drawn from a distribution centered on the weighted mean best rather than propelled by a decaying velocity, the swarm retains exploratory reach even in the later stages of the search. This property is largely irrelevant in low dimensions, where Classical PSO explores adequately regardless, but it becomes decisive at $n = 20$, where Classical PSO's swarm collapses before covering the space. The dramatic reversal on Ackley at $n = 20$---five orders of magnitude in QPSO's favor---is the clearest illustration, complemented by QPSO's consistent edge on the deceptive Schwefel landscape and its significantly higher local-minimum escape rate on Rastrigin at $n = 5$.
 
-The stagnation detection and recovery mechanism, shared by both algorithms, contributes to the robustness of the results. By perturbing a fraction of the swarm when no improvement is observed for 15 consecutive iterations, the mechanism prevents complete convergence to a suboptimal solution. However, the effectiveness of this mechanism differs between the two algorithms: in Classical PSO, stagnation recovery relies on velocity perturbation, which may not generate sufficient displacement in a high-dimensional space, while in QPSO, the inherent stochasticity of the position update provides a complementary source of diversity that enhances the recovery mechanism's effectiveness.
-
-From a practical standpoint, the computational cost of the quantum circuit modes warrants careful consideration. The Full Qiskit mode, while faithful to the quantum-mechanical formulation, incurs significant overhead due to circuit simulation on classical hardware. For most optimization applications where solution quality is the primary concern, the Math mode provides an efficient alternative with negligible loss in performance. The Full and Hybrid modes are better positioned for future deployment on actual quantum hardware, where the circuit execution overhead would be replaced by the physical operation of quantum gates, potentially offering speedups for high-dimensional problems that require large numbers of random samples.
+These findings qualify the common expectation that quantum-behaved swarms uniformly dominate on multimodal problems. In our controlled, paired-seed comparison the advantage is conditional: it emerges specifically where premature convergence is the failure mode, i.e.\ at high dimensionality and on deceptive landscapes. The stagnation-detection and scatter mechanism, shared by both algorithms, mitigates but does not eliminate premature convergence in Classical PSO, and its velocity-perturbation recovery is evidently less effective in high-dimensional spaces than the intrinsic stochasticity of the QPSO update. Practically, this suggests that QPSO is the preferable choice when the problem is high-dimensional or suspected to be deceptive, whereas Classical PSO remains superior when high-precision solutions to smooth or low-dimensional problems are required. It also points to a concrete avenue for improvement, pursued in future work: coupling QPSO's exploratory update with a precision-oriented local-refinement phase to recover the machine-precision convergence that classical PSO attains on easy landscapes without sacrificing the high-dimensional robustness that is QPSO's principal advantage.

@@ -84,13 +84,14 @@ def _run_one_comparison(cfg: ExperimentConfig, benchmark_name: str,
           f"{qpso_result['best_score']:>12.2e}")
     pso_its = pso_result["iter_to_success"]
     qpso_its = qpso_result["iter_to_success"]
-    print(f"  {'Iters to reach goal':<35} "
+    print(f"  {'Iter first reaching goal (of max)':<35} "
           f"{str(pso_its) if pso_its else 'NOT REACHED':>12}  "
           f"{str(qpso_its) if qpso_its else 'NOT REACHED':>12}")
-    print(f"  {'Time elapsed (s)':<35} {pso_result['elapsed_time']:>12.3f}  "
+    # NOTE: runtime is wall-clock for the FULL fixed-iteration run (no early stop),
+    # so it is not a time-to-goal measure and the two columns are not directly
+    # comparable across a single stochastic run. Reported for reference only.
+    print(f"  {'Total runtime, full run (s)':<35} {pso_result['elapsed_time']:>12.3f}  "
           f"{qpso_result['elapsed_time']:>12.3f}")
-    if pso_its and qpso_its:
-        print(f"\n  >>> QPSO reached goal {pso_its / qpso_its:.2f}x FASTER than PSO <<<")
     print(f"{'-' * 70}")
 
     # Save

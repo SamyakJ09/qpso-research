@@ -71,13 +71,13 @@ Cognitive coefficient ($c_1$) & 1.494 & 1.494 \\
 Social coefficient ($c_2$) & 1.494 & 1.494 \\
 Velocity clamping & 20\% of range & --- \\
 Quantum circuit shots & --- & 256 \\
-Stagnation detection limit & 15 iterations & 15 iterations \\
+Stagnation detection limit & 20 iterations & 20 iterations \\
 \midrule
 \multicolumn{3}{c}{\textbf{Common Parameters}} \\
 \midrule
 Swarm size & \multicolumn{2}{c}{40 particles} \\
 Maximum iterations & \multicolumn{2}{c}{500} \\
-Independent runs per configuration & \multicolumn{2}{c}{30} \\
+Independent runs per configuration & \multicolumn{2}{c}{50} \\
 Success threshold & \multicolumn{2}{c}{$1 \times 10^{-6}$} \\
 Dimensionalities tested & \multicolumn{2}{c}{2, 5, 10, 20} \\
 \bottomrule
@@ -86,7 +86,7 @@ Dimensionalities tested & \multicolumn{2}{c}{2, 5, 10, 20} \\
 
 For Classical PSO, the inertia weight follows a linear decay schedule from 0.9 to 0.4, a strategy that promotes exploration in the early iterations and exploitation in the later stages \cite{Shi1998}. The cognitive and social coefficients are both set to $c_1 = c_2 = 1.494$, consistent with the constriction factor approach proposed by Clerc and Kennedy \cite{Clerc2002}. Velocity clamping at 20\% of the search range prevents particles from overshooting the feasible domain.
 
-For QPSO, the contraction--expansion coefficient $\beta$ follows a linear decay from 1.0 to 0.5, governing the balance between global exploration and local convergence in the quantum-mechanical update equation \cite{Sun2004}. The number of quantum circuit shots is set to 256, providing a balance between randomness quality and computational overhead when operating in the full Qiskit mode. Both algorithms incorporate a stagnation detection mechanism that triggers perturbation of the swarm when no improvement in the global best fitness is observed for 15 consecutive iterations.
+For QPSO, the contraction--expansion coefficient $\beta$ follows a linear decay from 1.0 to 0.5, governing the balance between global exploration and local convergence in the quantum-mechanical update equation \cite{Sun2004}. The number of quantum circuit shots is set to 256, providing a balance between randomness quality and computational overhead when operating in the full Qiskit mode. Both algorithms incorporate a stagnation detection mechanism that triggers perturbation of the swarm when no improvement in the global best fitness is observed for 20 consecutive iterations.
 
 \subsection{Statistical Methodology}
 \label{subsec:statistics}
@@ -95,16 +95,16 @@ Metaheuristic optimizers are stochastic by nature, and their performance on any 
 
 For pairwise comparison between Classical PSO and QPSO on each benchmark function and dimensionality, we employ the Wilcoxon signed-rank test \cite{Wilcoxon1945}. This test evaluates whether the median difference in final best fitness values between the two algorithms is significantly different from zero, without requiring assumptions about the shape of the underlying distributions. It is particularly well-suited to the paired experimental design used here, where each algorithm is evaluated under identical random seeds.
 
-For overall ranking across multiple algorithm variants (including the three quantum randomness modes), we apply the Friedman test \cite{Friedman1937}, a non-parametric analogue of repeated-measures ANOVA. The Friedman test assigns ranks to algorithms within each benchmark--dimensionality combination and tests whether the observed rank differences are statistically significant. When the Friedman test indicates a significant difference, we apply post-hoc pairwise comparisons with appropriate correction for multiple testing.
+Because the present study compares two algorithms (Classical PSO and QPSO in the mathematical randomness mode), the Wilcoxon signed-rank test is our primary instrument, applied independently to each benchmark--dimensionality combination. For the highly multimodal Rastrigin landscape we additionally report a binary \emph{escape-rate} analysis---the fraction of runs whose final solution reaches the global basin---compared with Fisher's exact test, as this success-oriented metric better reflects an optimizer's ability to escape local minima than the mean final fitness, which is dominated by run-to-run variance on rugged landscapes. A broader multi-variant ranking of the three quantum randomness modes (Math, Full, Hybrid) via the Friedman test \cite{Friedman1937} is left to future work, as the circuit-based modes incur substantial simulation overhead (Section~\ref{sec:conclusion}).
 
-All statistical tests are conducted at a significance level of $\alpha = 0.05$. Effect sizes are reported alongside $p$-values to distinguish between statistically significant and practically meaningful differences.
+All statistical tests are conducted at a significance level of $\alpha = 0.05$.
 
 \subsection{Experimental Protocol}
 \label{subsec:protocol}
 
-To ensure a fair comparison, both algorithms are initialized with identical random seeds for each of the 30 independent runs. This paired design eliminates variability due to initial swarm configurations and isolates the algorithmic differences as the sole source of performance divergence. The random seed sequence is drawn from a fixed set and is consistent across all benchmark functions and dimensionalities.
+To ensure a fair comparison, both algorithms are initialized with identical random seeds for each of the 50 independent runs. This paired design eliminates variability due to initial swarm configurations and isolates the algorithmic differences as the sole source of performance divergence. The random seed sequence is drawn from a fixed set and is consistent across all benchmark functions and dimensionalities.
 
-Each experimental run records the complete convergence history (global best fitness at every iteration), the final best fitness value, and the elapsed wall-clock time. From these raw outputs, we compute summary statistics including the mean, standard deviation, median, and best and worst final fitness values across the 30 runs. Convergence curves are plotted as the median trajectory with shaded interquartile ranges to provide a robust visual summary that is less sensitive to outliers than mean-based summaries.
+Each experimental run records the complete convergence history (global best fitness at every iteration), the final best fitness value, and the elapsed wall-clock time. From these raw outputs, we compute summary statistics including the mean, standard deviation, median, and best and worst final fitness values across the 50 runs. Convergence curves are plotted as the median trajectory with shaded interquartile ranges to provide a robust visual summary that is less sensitive to outliers than mean-based summaries.
 
 The framework also generates box plots for each benchmark--dimensionality combination, allowing direct visual comparison of the distributional spread of final fitness values. All visualizations follow publication-quality formatting conventions with consistent axis scales, color palettes, and labeling.
 

@@ -109,15 +109,18 @@ and Xu for QPSO~\cite{Xi2008}.
 Second, we conduct a \emph{comprehensive benchmark study} across six standard
 test functions---Sphere, Rastrigin, Rosenbrock, Ackley, Griewank, and
 Schwefel---spanning unimodal, multimodal, valley-shaped, and deceptive
-landscape topologies.  Each algorithm--mode combination is evaluated over
-multiple independent runs with controlled random seeds, and we record
+landscape topologies, at dimensionalities $n \in \{2, 5, 10, 20\}$.  Classical
+PSO and QPSO (in the mathematical randomness mode) are each evaluated over 50
+independent runs with controlled, paired random seeds, and we record
 convergence histories, iteration-to-success counts, and final objective
 values.
 
 Third, we perform a \emph{rigorous statistical comparison} of the results,
-employing non-parametric tests and effect-size measures to determine whether
-observed differences between randomness modes are statistically significant
-and practically meaningful, rather than artefacts of sampling variability.
+employing the non-parametric Wilcoxon signed-rank test---complemented, for the
+multimodal Rastrigin function, by a binary local-minimum escape-rate analysis
+under Fisher's exact test---to determine whether observed differences between
+the two algorithms are statistically significant and practically meaningful,
+rather than artefacts of sampling variability.
 
 The remainder of this paper is organised as follows.
 Section~\ref{sec:background} reviews the mathematical foundations of classical
