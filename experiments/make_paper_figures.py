@@ -30,9 +30,35 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+# Serif + gridded style so the figures read as part of the LaTeX serif body
+# (matches the publication document). Vector PDF is the primary output.
+plt.rcParams.update({
+    "font.family": "serif",
+    "mathtext.fontset": "dejavuserif",
+    "axes.grid": True,
+    "grid.alpha": 0.25,
+    "grid.linewidth": 0.5,
+    "figure.dpi": 150,
+    "savefig.dpi": 300,
+    "savefig.bbox": "tight",
+    "lines.linewidth": 1.8,
+    "axes.titlesize": 11,
+    "axes.labelsize": 10,
+    "legend.frameon": False,
+    "pdf.fonttype": 42,   # embed TrueType (editable/searchable text in the PDF)
+})
+
 RAW = Path("results/raw")
-FIG = Path("results/figures")
+FIG = Path("paper/figures")   # tracked, so the paper builds from a clean clone
 FLOOR = 1e-10  # clamp for log-scale display (scores can reach exact 0)
+
+
+def _savefig_all(fig, stem: str) -> None:
+    """Save a figure as vector PDF (for LaTeX) plus SVG and PNG copies."""
+    FIG.mkdir(parents=True, exist_ok=True)
+    for ext in ("pdf", "svg", "png"):
+        fig.savefig(FIG / f"{stem}.{ext}")
+    plt.close(fig)
 
 PSO_COLOR = "tomato"
 QPSO_COLOR = "royalblue"
@@ -102,11 +128,8 @@ def make_grid(dim: int) -> None:
     fig.suptitle(f"Median convergence with IQR band across {n_runs} runs",
                  y=1.06, fontsize=12)
     fig.tight_layout()
-    out = FIG / "convergence_grid.png"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out, dpi=200, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  wrote {out}")
+    _savefig_all(fig, "convergence_grid")
+    print("  wrote convergence_grid.{pdf,svg,png}")
 
 
 def make_single(bench: str, dim: int) -> None:
@@ -120,10 +143,8 @@ def make_single(bench: str, dim: int) -> None:
     ax.set_ylabel("Global best fitness")
     ax.legend(frameon=False)
     fig.tight_layout()
-    out = FIG / f"convergence_{bench}.png"
-    fig.savefig(out, dpi=200, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  wrote {out}")
+    _savefig_all(fig, f"convergence_{bench}")
+    print(f"  wrote convergence_{bench}.{{pdf,svg,png}}")
 
 
 def main() -> None:

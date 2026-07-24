@@ -83,17 +83,19 @@ after the study has populated `results/`:
 # 1. Generate the data (writes results/raw, results/figures, results/summary)
 qpso-study --config configs/publication.yaml          # ~30 min, math mode, 50 runs
 
-# 2. Generate the convergence figures referenced by the paper
-python experiments/make_paper_figures.py              # -> results/figures/convergence_*.png
+# 2. Generate the convergence figures referenced by the paper (vector PDF + SVG + PNG)
+python experiments/make_paper_figures.py              # -> paper/figures/convergence_*.pdf
 #   options: --dim N (grid dimensionality, default 10), --rosenbrock-dim N (default 20)
 
-# 3. Build the PDF (requires a LaTeX toolchain with biber; e.g. MiKTeX or TeX Live)
-cd paper && latexmk -pdf main.tex                     # -> paper/build/main.pdf
+# 3. Build the PDF (requires a LaTeX toolchain with biber + minted's latexminted; e.g. MiKTeX or TeX Live)
+cd paper && latexmk -pdf -shell-escape main.tex       # -> paper/build/main.pdf
 ```
 
-Figures are read from `results/figures/` via `\graphicspath` in `paper/preamble.tex`, so the study
-and figure steps must run before compiling. The boxplots (`boxplot_math_<fn>_<dim>d.png`) are produced
-directly by the study; the median-convergence curves come from step 2.
+The paper's figures live in `paper/figures/` (committed, so the paper builds from a clean clone);
+`\graphicspath` in `paper/preamble.tex` also falls back to `results/figures/`. The LaTeX build
+includes the vector `.pdf` copies; the `.svg`/`.png` copies coexist for web/editing use. Step 2
+reads the raw run CSVs from `results/raw/`, so run the study (step 1) first. `-shell-escape` is
+required by `minted` for syntax-highlighted code listings.
 
 > **Data ↔ paper consistency:** the numbers in `paper/sections/results.tex` (Tables — scaling,
 > Wilcoxon, and Rastrigin escape-rate) are transcribed from a completed `publication.yaml` run plus

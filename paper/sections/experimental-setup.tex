@@ -6,52 +6,17 @@ This section describes the benchmark test suite, algorithmic parameters, statist
 \subsection{Benchmark Test Suite}
 \label{subsec:benchmarks}
 
-We evaluate both algorithms on six well-established benchmark functions that span a range of landscape characteristics, including unimodal, multimodal, and valley-shaped topologies. These functions are widely used in the evolutionary computation literature and provide a balanced assessment of an optimizer's ability to exploit gradients, escape local optima, and navigate narrow valleys. Table~\ref{tab:benchmarks} summarizes the mathematical definitions, search domains, global optima, and landscape characteristics of each function.
-
-\begin{table}[htbp]
-\centering
-\caption{Benchmark test functions used in the experimental evaluation. All functions are minimized, with the global optimum value $f^* = 0$ except where noted.}
-\label{tab:benchmark-setup}
-\small
-\begin{tabular}{@{}llccc@{}}
-\toprule
-\textbf{Function} & \textbf{Definition} & \textbf{Domain} & \textbf{Optimum} & \textbf{Characteristic} \\
-\midrule
-Sphere &
-$f(\mathbf{x}) = \sum_{i=1}^{n} x_i^2$ &
-$[-5.12, 5.12]^n$ &
-$\mathbf{0}$, $f^*=0$ &
-Unimodal \\[6pt]
-Rastrigin &
-$f(\mathbf{x}) = 10n + \sum_{i=1}^{n} \left[ x_i^2 - 10\cos(2\pi x_i) \right]$ &
-$[-5.12, 5.12]^n$ &
-$\mathbf{0}$, $f^*=0$ &
-Multimodal \\[6pt]
-Rosenbrock &
-$f(\mathbf{x}) = \sum_{i=1}^{n-1} \left[ 100(x_{i+1} - x_i^2)^2 + (1 - x_i)^2 \right]$ &
-$[-5, 10]^n$ &
-$\mathbf{1}$, $f^*=0$ &
-Valley \\[6pt]
-Ackley &
-$\begin{aligned} f(\mathbf{x}) = &{-20\exp\!\left(-0.2\sqrt{\frac{1}{n}\sum_{i=1}^{n}x_i^2}\right)} \\ &{- \exp\!\left(\frac{1}{n}\sum_{i=1}^{n}\cos(2\pi x_i)\right) + 20 + e} \end{aligned}$ &
-$[-32.768, 32.768]^n$ &
-$\mathbf{0}$, $f^*=0$ &
-Multimodal \\[6pt]
-Griewank &
-$f(\mathbf{x}) = \sum_{i=1}^{n} \frac{x_i^2}{4000} - \prod_{i=1}^{n} \cos\!\left(\frac{x_i}{\sqrt{i}}\right) + 1$ &
-$[-600, 600]^n$ &
-$\mathbf{0}$, $f^*=0$ &
-Multimodal \\[6pt]
-Schwefel &
-$f(\mathbf{x}) = 418.9829n - \sum_{i=1}^{n} x_i \sin\!\left(\sqrt{|x_i|}\right)$ &
-$[-500, 500]^n$ &
-$\mathbf{420.97}$, $f^*=0$ &
-Deceptive \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The Sphere function serves as a baseline for evaluating convergence speed on a smooth, convex surface. Rastrigin introduces a highly multimodal landscape with a cosine-modulated surface containing approximately $10^n$ local minima, making it a stringent test of an algorithm's ability to avoid premature convergence. Rosenbrock presents a narrow, parabolic valley where the global optimum lies inside a long, curved ridge, challenging the optimizer's capacity for fine-grained directional search. The Ackley function combines a nearly flat outer region with a deep central well surrounded by numerous local optima, testing both exploration and exploitation. Griewank features a product term that creates widespread interdependence among variables, while the summation term provides a quadratic bowl with superimposed oscillations. Finally, the Schwefel function is considered deceptive because the second-best local minimum is geometrically distant from the global optimum, rewarding algorithms that maintain diverse search populations.
+We evaluate both algorithms on the six well-established benchmark functions
+introduced in Section~\ref{sec:bg:benchmarks} and summarised---with their
+search domains, global optima, and landscape characteristics---in
+Table~\ref{tab:benchmarks}: Sphere, Rastrigin, Rosenbrock, Ackley, Griewank,
+and Schwefel. These functions are widely used in the evolutionary computation
+literature and span unimodal, multimodal, valley-shaped, and deceptive
+topologies, providing a balanced assessment of an optimiser's ability to
+exploit gradients, escape local optima, and navigate narrow valleys. To avoid
+duplication, their complete closed-form definitions are collected in
+Appendix~\ref{app:benchmarks} (Table~\ref{tab:benchmark-formulas}) rather than
+repeated here.
 
 \subsection{Parameter Configuration}
 \label{subsec:parameters}

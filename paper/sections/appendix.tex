@@ -100,7 +100,31 @@ def compute_weighted_mean_best(
 
 For the \texttt{full} and \texttt{hybrid} modes, the tunnelling sign is
 sampled from a single-qubit circuit whose measurement bias is controlled
-by the contraction--expansion coefficient~$\beta$.
+by the contraction--expansion coefficient~$\beta$.  A qubit initialised in
+$|0\rangle$ is passed through a Hadamard gate followed by a parameterised
+rotation
+\begin{equation}
+  R_Y(\theta) = \begin{pmatrix}
+    \cos(\theta/2) & -\sin(\theta/2) \\
+    \sin(\theta/2) & \phantom{-}\cos(\theta/2)
+  \end{pmatrix},
+  \label{eq:ry_gate}
+\end{equation}
+with $\theta = \beta\pi$.  After the combined $H \cdot R_Y(\beta\pi)$
+operation, the probability of measuring $|1\rangle$ is
+\begin{equation}
+  P(|1\rangle) = \sin^2\!\biggl(\frac{\beta\pi}{2}\biggr).
+  \label{eq:prob_one}
+\end{equation}
+When $\beta$ is large (early exploration) $P(|1\rangle) \approx 0.5$, an
+approximately unbiased coin flip; as $\beta$ decays toward $0.5$,
+$P(|1\rangle) \approx 0.15$, biasing the sign toward $+1$ (outward
+displacement) and thereby tightening the effective search radius.  The measured
+fraction of $|1\rangle$ outcomes over the shot budget simultaneously provides
+the displacement magnitude and, via thresholding at $0.5$, the binary tunnelling
+sign.  In \texttt{full} mode, two additional Hadamard-only circuits supply the
+cognitive and social weights $r_1$ and $r_2$.  All circuits for a single
+iteration are batched into one backend job to minimise communication overhead.
 
 \begin{minted}{python}
 # Quantum circuit for beta-biased sign (from quantum_engine.py)
