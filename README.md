@@ -31,24 +31,76 @@ pip install -e ".[quantum]"
 
 ## Running Experiments
 
+### Which config do I run?
+
+| Config | Scope | Runs / iters | Runtime | Use for |
+|--------|-------|--------------|---------|---------|
+| `configs/default.yaml` | 3 benchmarks, dims 2 & 5 | 5 runs, 150 iters | seconds | Quick smoke test only — **not** for reporting (too few runs/iters for significance) |
+| `configs/rastrigin_powered.yaml` | Rastrigin, dims 2/5/10/20 | 50 runs, 500 iters, `math` | ~2.5 min | Properly-powered Rastrigin sweep — the multimodal result |
+| `configs/publication.yaml` | 6 benchmarks, dims 2/5/10/20 | 50 runs, 500 iters, `math` | ~30 min | **The paper study** — fills the scaling + significance tables |
+
+> **Reporting numbers:** always use a 50-run config. `default.yaml` cannot produce significant results
+> even when a real effect exists. For Rastrigin specifically, report **success/escape rate**
+> (fraction of runs reaching the global optimum / basin), not just mean fitness — the mean is
+> dominated by run-to-run variance and hides QPSO's local-minimum-escape advantage.
+>
+> **Quantum modes (`full`/`hybrid`):** the circuit-based randomness modes require
+> `pip install -e ".[quantum]"` and are ~100× slower than `math` (a Qiskit circuit is built every
+> iteration). They are **not** part of the main study grid — the empirical paper uses `math` mode.
+> A `math`-vs-`hybrid`-vs-`full` comparison is left as a separate, reduced sub-study (future work).
+
+### Commands
+
 After installation, three equivalent methods are available — choose whichever works on your system:
 
 ```bash
 # Method 1 — Installed commands (recommended, works everywhere)
-qpso-compare --benchmark sphere --dims 2 --mode math
-qpso-study --config configs/default.yaml
+qpso-compare --benchmark rastrigin --dims 5 --mode math   # single PSO-vs-QPSO run (illustrative)
+qpso-study --config configs/rastrigin_powered.yaml        # powered Rastrigin sweep (~2.5 min)
+qpso-study --config configs/publication.yaml              # full paper study, math mode (~30 min)
 
 # Method 2 — Module execution (works with 'py' on Windows, 'python3' on Unix)
-py -m qpso_research compare --benchmark sphere --dims 2
-py -m qpso_research study --config configs/default.yaml
+py -m qpso_research compare --benchmark rastrigin --dims 5
+py -m qpso_research study --config configs/rastrigin_powered.yaml
 
 # Method 3 — Script execution
-python experiments/run_comparison.py --benchmark sphere --dims 2 --mode math
-python experiments/run_full_study.py --config configs/default.yaml
+python experiments/run_comparison.py --benchmark rastrigin --dims 5 --mode math
+python experiments/run_full_study.py --config configs/rastrigin_powered.yaml
 
 # Run tests
 pytest -v
 ```
+
+Outputs land in `results/`: raw per-run CSVs in `results/raw/`, boxplots in `results/figures/`,
+and the summary table + `experiment_summary.json` (means, stds, Wilcoxon p-values) in `results/summary/`.
+
+## Reproducing the Paper
+
+The paper (`paper/`) is built from the study outputs in three steps. Run them from the repo root
+after the study has populated `results/`:
+
+```bash
+# 1. Generate the data (writes results/raw, results/figures, results/summary)
+qpso-study --config configs/publication.yaml          # ~30 min, math mode, 50 runs
+
+# 2. Generate the convergence figures referenced by the paper (vector PDF + SVG + PNG)
+python experiments/make_paper_figures.py              # -> paper/figures/convergence_*.pdf
+#   options: --dim N (grid dimensionality, default 10), --rosenbrock-dim N (default 20)
+
+# 3. Build the PDF (requires a LaTeX toolchain with biber + minted's latexminted; e.g. MiKTeX or TeX Live)
+cd paper && latexmk -pdf -shell-escape main.tex       # -> paper/build/main.pdf
+```
+
+The paper's figures live in `paper/figures/` (committed, so the paper builds from a clean clone);
+`\graphicspath` in `paper/preamble.tex` also falls back to `results/figures/`. The LaTeX build
+includes the vector `.pdf` copies; the `.svg`/`.png` copies coexist for web/editing use. Step 2
+reads the raw run CSVs from `results/raw/`, so run the study (step 1) first. `-shell-escape` is
+required by `minted` for syntax-highlighted code listings.
+
+> **Data ↔ paper consistency:** the numbers in `paper/sections/results.tex` (Tables — scaling,
+> Wilcoxon, and Rastrigin escape-rate) are transcribed from a completed `publication.yaml` run plus
+> the Rastrigin escape-rate analysis. If you re-run the study with different settings, regenerate the
+> figures and update those tables to match `results/summary/`.
 
 ## Windows Troubleshooting
 
@@ -80,10 +132,16 @@ src/qpso_research/       Core library
 experiments/             Thin wrappers (import from cli.py)
   run_comparison.py      Single-benchmark PSO vs QPSO
   run_full_study.py      Multi-benchmark statistical study
+  make_paper_figures.py  Median+IQR convergence figures for the paper
 
 configs/                 YAML configuration files
-  default.yaml           Quick test (3 benchmarks, 5 runs)
-  publication.yaml       Full study (6 benchmarks, 30 runs)
+  default.yaml           Quick smoke test (3 benchmarks, 5 runs, 150 iters)
+  rastrigin_powered.yaml Powered Rastrigin sweep (dims 2/5/10/20, 50 runs, 500 iters)
+  publication.yaml       Paper study (6 benchmarks, dims 2/5/10/20, 50 runs, math mode)
+
+paper/                   LaTeX manuscript (build with: cd paper && latexmk -pdf main.tex)
+  main.tex               Document root; sections/ holds each section
+  build/main.pdf         Compiled output
 
 tests/                   Unit tests
 results/                 Auto-generated output (gitignored)

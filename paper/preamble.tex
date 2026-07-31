@@ -6,6 +6,7 @@
 \usepackage{lmodern}           % Latin Modern — refined Computer Modern
 \usepackage[T1]{fontenc}       % proper glyph encoding
 \usepackage[utf8]{inputenc}    % UTF-8 source files
+\usepackage[british]{babel}    % British English hyphenation and conventions
 
 % ── Mathematics ─────────────────────────────────────────────
 \usepackage{amsmath}
@@ -19,6 +20,7 @@
 \usepackage{tabularx}          % auto-width columns
 \usepackage{multirow}          % span rows in tables
 \usepackage{graphicx}          % \includegraphics
+\graphicspath{{figures/}{../results/figures/}}  % paper/figures (tracked); results/figures fallback
 \usepackage{float}             % [H] placement
 \usepackage{subcaption}        % subfigures
 
@@ -27,20 +29,20 @@
 \definecolor{codebg}{RGB}{248, 248, 248}
 \definecolor{psocolor}{named}{Tomato}
 \definecolor{qpsocolor}{named}{RoyalBlue}
-\definecolor{linkcolor}{RGB}{0, 80, 160}
 
 % ── Code listings with minted ───────────────────────────────
 \usepackage{minted}
 \setminted{
-    fontsize=\footnotesize,
+    style=tango,               % high-contrast, print-readable Pygments palette
+    fontsize=\small,
     frame=lines,
     framesep=2mm,
     linenos,
     breaklines,
     numbersep=5pt,
     tabsize=4,
+    bgcolor=codebg,            % subtle tint (RGB 248,248,248 ~ gray!3)
 }
-\usemintedstyle{friendly}
 
 % ── Algorithms ──────────────────────────────────────────────
 \usepackage{algorithm}
@@ -53,11 +55,13 @@
 % ── Hyperlinks and cross-references ─────────────────────────
 \usepackage[
     colorlinks=true,
-    linkcolor=linkcolor,
-    citecolor=linkcolor,
-    urlcolor=linkcolor,
+    linkcolor=NavyBlue,        % internal links (sections, figures, tables)
+    citecolor=OliveGreen,      % citations
+    urlcolor=BrickRed,         % external URLs
     bookmarks=true,
     bookmarksnumbered=true,
+    pdfauthor={Samyak Jain},
+    pdftitle={Quantum-Behaved Particle Swarm Optimisation: A Comparative Study with Classical PSO},
 ]{hyperref}
 \usepackage[noabbrev,capitalise]{cleveref}  % \cref{} — load AFTER hyperref
 

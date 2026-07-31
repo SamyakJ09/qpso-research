@@ -1,5 +1,12 @@
-# Full publication study — 6 benchmarks, 4 dimensions, 30 runs
+# Paper core study — all 6 benchmarks, 4 dimensions, 50 runs, MATH mode.
+# Fills the main scaling table and the Wilcoxon significance table.
 # Usage: qpso-study --config configs/publication.yaml
+# Runtime: ~30 min (math mode, single-threaded).
+#
+# NOTE: the quantum-mode comparison (math vs hybrid vs full) is a SEPARATE,
+# reduced sub-study — see configs/quantum_modes.yaml. Hybrid/full modes call
+# Qiskit circuits every iteration and are ~100x slower than math, so they are
+# not run across the full 6x4x50 grid.
 
 benchmarks:
   - sphere
@@ -10,13 +17,13 @@ benchmarks:
   - schwefel
 
 dimensions: [2, 5, 10, 20]
-num_runs: 30
+num_runs: 50
 num_particles: 40
 max_iterations: 500
 success_threshold: 1.0e-6
 stagnation_limit: 20
 seed: 42
-qpso_modes: ["math", "hybrid"]
+qpso_modes: ["math"]
 verbose: false
 results_dir: results
 

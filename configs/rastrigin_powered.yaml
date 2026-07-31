@@ -1,0 +1,35 @@
+# Focused powered study — Rastrigin only, all dimensions, 30 runs.
+# Purpose: properly-powered PSO vs QPSO comparison on the multimodal
+# benchmark, at a fair 500-iteration budget. Reveals the dimension at
+# which QPSO's tunnelling separates from PSO's local-minimum collapse.
+# Usage: qpso-study --config configs/rastrigin_powered.yaml
+# Runtime: ~2.5 min (math mode). 50 runs/condition powers the 5D
+# escape-rate result past p<0.05 and tightens all confidence intervals.
+
+benchmarks:
+  - rastrigin
+
+dimensions: [2, 5, 10, 20]
+num_runs: 50
+num_particles: 40
+max_iterations: 500
+success_threshold: 1.0e-6
+stagnation_limit: 20
+seed: 42
+qpso_modes: ["math"]
+verbose: false
+results_dir: results
+
+pso:
+  inertia_start: 0.9
+  inertia_end: 0.4
+  cognitive_coef: 1.494
+  social_coef: 1.494
+  velocity_clamp: 0.2
+
+qpso:
+  beta_start: 1.0
+  beta_end: 0.5
+  shots: 256
+  momentum_decay: 0.7
+  momentum_weight: 0.1
