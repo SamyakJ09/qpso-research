@@ -4,8 +4,8 @@ Generate the publication figures referenced in paper/sections/results.tex.
 Reads the per-run convergence CSVs written by ``qpso-study`` (results/raw/)
 and produces:
 
-  results/figures/convergence_grid.png       -> fig:convergence-curves
-  results/figures/convergence_rosenbrock.png -> fig:convergence-rosenbrock
+    paper/figures/convergence_grid.png       -> fig:convergence-curves
+    paper/figures/convergence_rosenbrock.png -> fig:convergence-rosenbrock
 
 The Schwefel box plot (fig:boxplots-schwefel) is produced directly by the
 study run as results/figures/boxplot_math_schwefel_20d.png.
@@ -17,6 +17,7 @@ PSO=tomato / QPSO=royalblue palette used elsewhere in the package.
 Usage:
   python experiments/make_paper_figures.py            # defaults (grid at n=10)
   python experiments/make_paper_figures.py --dim 10
+    python experiments/make_paper_figures.py --rosenbrock-dim 20
 """
 
 from __future__ import annotations
@@ -113,6 +114,14 @@ def _plot_panel(ax, bench: str, dim: int) -> bool:
 
 def make_grid(dim: int) -> None:
     benches = ["sphere", "rastrigin", "rosenbrock", "ackley", "griewank", "schwefel"]
+    missing = [bench for bench in benches
+               if _load_histories("pso", bench, dim) is None
+               or _load_histories("qpso_math", bench, dim) is None]
+    if missing:
+        raise RuntimeError(
+            f"Missing convergence data for {dim}D: {', '.join(missing)}. "
+            "Run the publication study before generating paper figures."
+        )
     fig, axes = plt.subplots(2, 3, figsize=(13, 7.5))
     n_runs = 0
     for ax, bench in zip(axes.flat, benches):
@@ -133,6 +142,12 @@ def make_grid(dim: int) -> None:
 
 
 def make_single(bench: str, dim: int) -> None:
+    if (_load_histories("pso", bench, dim) is None
+            or _load_histories("qpso_math", bench, dim) is None):
+        raise RuntimeError(
+            f"Missing convergence data for {bench} {dim}D. "
+            "Run the publication study before generating paper figures."
+        )
     fig, ax = plt.subplots(figsize=(7, 4.5))
     n_runs = _plot_panel(ax, bench, dim)
     if not n_runs:
@@ -151,8 +166,8 @@ def main() -> None:
     p = argparse.ArgumentParser(description="Generate paper convergence figures")
     p.add_argument("--dim", type=int, default=10,
                    help="Dimensionality for the convergence grid (default 10)")
-    p.add_argument("--rosenbrock-dim", type=int, default=10,
-                   help="Dimensionality for the Rosenbrock detail figure")
+    p.add_argument("--rosenbrock-dim", type=int, default=20,
+                   help="Dimensionality for the Rosenbrock detail figure (default 20)")
     args = p.parse_args()
 
     print("Generating paper figures...")
